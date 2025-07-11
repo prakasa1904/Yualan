@@ -44,7 +44,12 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? array_merge(
+                    $request->user()->toArray(),
+                    // Pastikan relasi 'tenant' dimuat di sini jika user memiliki tenant_id
+                    // dan tambahkan ke array yang dibagikan ke frontend.
+                    $request->user()->tenant_id ? ['tenant' => $request->user()->tenant] : []
+                ) : null,
             ],
             'ziggy' => [
                 ...(new Ziggy)->toArray(),

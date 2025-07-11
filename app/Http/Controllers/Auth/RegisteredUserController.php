@@ -41,6 +41,7 @@ class RegisteredUserController extends Controller
         ]);
 
         $tenant = null; // Inisialisasi variabel tenant
+        $user = null; // Inisialisasi variabel user
 
         if ($request->registration_type === 'personal') {
             // Validasi khusus untuk pendaftaran personal (Step 3 dari frontend)
@@ -95,8 +96,8 @@ class RegisteredUserController extends Controller
                 'address' => $request->company_address,
                 'city' => $request->company_city,
                 'state' => $request->company_state,
-                'zip_code' => $request->company_zip_code,
-                'country' => $request->company_country,
+                'zip_code' => $request->zip_code, // Perbaikan: gunakan $request->zip_code
+                'country' => $request->country, // Perbaikan: gunakan $request->country
                 'business_type' => $request->business_type,
                 'is_active' => true, // Perusahaan baru langsung aktif
             ]);
@@ -119,7 +120,12 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        // Redirect ke dashboard atau halaman sukses
-        return redirect(route('dashboard', absolute: false));
+        // Redirect ke dashboard tenant yang sesuai
+        if ($user->tenant_id && ($tenant = $user->tenant)) {
+            return redirect()->route('tenant.dashboard', ['tenantSlug' => $tenant->slug]);
+        }
+
+        // Fallback jika entah mengapa user tidak memiliki tenant_id atau tenant tidak ditemukan
+        return redirect()->route('dashboard.default');
     }
 }
