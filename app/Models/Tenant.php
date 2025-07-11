@@ -2,17 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str; // Untuk UUID
 
-class User extends Authenticatable implements MustVerifyEmail
+class Tenant extends Model
 {
-    use HasFactory, Notifiable, SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     /**
      * The "type" of the primary key ID.
@@ -35,35 +33,33 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     protected $fillable = [
         'id', // Tambahkan 'id' karena kita akan mengaturnya secara manual (UUID)
-        'tenant_id',
         'name',
+        'invitation_code',
+        'slug',
         'email',
-        'password',
-        'role',
+        'phone',
+        'address',
+        'city',
+        'state',
+        'zip_code',
+        'country',
+        'business_type',
+        'is_active',
+        'ipaymu_api_key',
+        'ipaymu_secret_key',
+        'ipaymu_mode',
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
-
-    /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast.
      *
      * @return array<string, string>
      */
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
             'id' => 'string', // Pastikan ID di-cast sebagai string
-            'tenant_id' => 'string', // Pastikan tenant_id di-cast sebagai string
+            'is_active' => 'boolean',
         ];
     }
 
@@ -81,11 +77,11 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Get the tenant that owns the User.
+     * Get the users for the Tenant.
      */
-    public function tenant(): BelongsTo
+    public function users(): HasMany
     {
-        return $this->belongsTo(Tenant::class);
+        return $this->hasMany(User::class);
     }
 }
 

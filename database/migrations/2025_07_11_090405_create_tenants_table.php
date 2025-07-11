@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('tenants', function (Blueprint $table) {
             $table->uuid('id')->primary(); // UUID for tenant ID
             $table->string('name');
+            $table->string('invitation_code')->unique();
             $table->string('slug')->unique(); // Unique slug for subdomain/path routing (e.g., myshop.yourdomain.com)
             $table->string('email')->unique();
             $table->string('phone')->nullable();
