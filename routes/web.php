@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\TenantLinkController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
@@ -134,6 +135,9 @@ Route::middleware('auth')->group(function () {
             'tenantName' => $tenant->name, // Kirim nama tenant juga
         ]);
     })->middleware('tenant.access')->name('tenant.dashboard');
+
+    Route::resource('{tenantSlug}/categories', CategoryController::class)
+        ->middleware('tenant.access');
 
     // Contoh rute lain yang memerlukan otorisasi tenant
     // Route::get('/{tenantSlug}/products', [ProductController::class, 'index'])->middleware('tenant.access')->name('tenant.products');

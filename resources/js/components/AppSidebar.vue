@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3'; // Import usePage
-import { BookOpen, Folder, LayoutGrid } from 'lucide-vue-next';
+import { BookOpen, Box, Folder, LayoutGrid } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import { computed } from 'vue'; // Import computed
 
@@ -18,6 +18,11 @@ const mainNavItems: NavItem[] = [
         // Gunakan fungsi route() dengan parameter slug
         href: tenantSlug.value ? route('tenant.dashboard', { tenantSlug: tenantSlug.value }) : route('dashboard.default'),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Category',
+        href: tenantSlug.value ? route('categories.index', { tenantSlug: tenantSlug.value }) : '#',
+        icon: Box,
     },
     // Tambahkan item navigasi lain yang mungkin memerlukan slug
     // {
