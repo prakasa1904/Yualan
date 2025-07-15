@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SaleController;
 use App\Http\Controllers\TenantLinkController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
@@ -138,6 +141,34 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('{tenantSlug}/categories', CategoryController::class)
         ->middleware('tenant.access');
+
+    Route::resource('{tenantSlug}/products', ProductController::class)
+        ->middleware('tenant.access');
+
+    // Master Customers routes, tenant-scoped
+    Route::resource('{tenantSlug}/customers', CustomerController::class)
+        ->middleware('tenant.access'); // Apply tenant access middleware
+
+    // Route for exporting customer ID card
+    Route::get('{tenantSlug}/customers/{customer}/id-card', [CustomerController::class, 'exportIdCard'])
+        ->name('customers.idCard')
+        ->middleware('tenant.access');
+
+    Route::prefix('{tenantSlug}')->middleware('tenant.access')->group(function () {
+        Route::get('order', [SaleController::class, 'index'])->name('sales.order');
+        Route::post('order', [SaleController::class, 'store'])->name('sales.store');
+        Route::get('/sales/receipt/{sale}', [SaleController::class, 'receipt'])->name('sales.receipt');
+        Route::get('/sales/receipt/{sale}/pdf', [SaleController::class, 'generateReceiptPdf'])->name('sales.receipt.pdf'); // Rute baru untuk PDF
+        Route::get('sales/history', [SaleController::class, 'history'])->name('sales.history'); // New: Sales History Route
+
+        // iPaymu Callback URLs (these should be publicly accessible for iPaymu to call)
+        // Ensure these routes are NOT under 'auth' middleware if iPaymu calls them directly
+        // For simplicity, placing them under tenantSlug prefix for now.
+        // In production, notifyUrl might need to be outside auth/tenant.access if iPaymu doesn't send auth info.
+        Route::any('ipaymu/return/{sale}', [SaleController::class, 'ipaymuReturn'])->name('sales.ipaymuReturn');
+        Route::any('ipaymu/cancel/{sale}', [SaleController::class, 'ipaymuCancel'])->name('sales.ipaymuCancel');
+        Route::any('ipaymu/notify', [SaleController::class, 'ipaymuNotify'])->name('sales.ipaymuNotify');
+    });
 
     // Contoh rute lain yang memerlukan otorisasi tenant
     // Route::get('/{tenantSlug}/products', [ProductController::class, 'index'])->middleware('tenant.access')->name('tenant.products');
