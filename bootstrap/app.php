@@ -28,6 +28,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant.access' => CheckTenantAccess::class,
             'superadmin.access' => CheckSuperadmin::class,
         ]);
+
+        $middleware->validateCsrfTokens(except: [
+            'sales/ipaymu/notify',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

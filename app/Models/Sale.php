@@ -95,7 +95,7 @@ class Sale extends Model
     }
 
     /**
-     * Get the user (cashier) that made the Sale.
+     * Get the user (cashier) who made the Sale.
      */
     public function user(): BelongsTo
     {
@@ -103,7 +103,7 @@ class Sale extends Model
     }
 
     /**
-     * Get the customer associated with the Sale.
+     * Get the customer for the Sale.
      */
     public function customer(): BelongsTo
     {
@@ -113,8 +113,16 @@ class Sale extends Model
     /**
      * Get the sale items for the Sale.
      */
-    public function sale_items(): HasMany
+    public function saleItems(): HasMany
     {
         return $this->hasMany(SaleItem::class);
+    }
+
+    /**
+     * Get the payments for the Sale.
+     */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
     }
 }

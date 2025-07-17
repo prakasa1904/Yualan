@@ -154,21 +154,20 @@ Route::middleware('auth')->group(function () {
         ->name('customers.idCard')
         ->middleware('tenant.access');
 
+    // Rute untuk Sales/Pemesanan dan Riwayat
     Route::prefix('{tenantSlug}')->middleware('tenant.access')->group(function () {
-        Route::get('order', [SaleController::class, 'index'])->name('sales.order');
-        Route::post('order', [SaleController::class, 'store'])->name('sales.store');
+        Route::get('/sales/order', [SaleController::class, 'order'])->name('sales.order');
+        Route::post('/sales/store', [SaleController::class, 'store'])->name('sales.store');
         Route::get('/sales/receipt/{sale}', [SaleController::class, 'receipt'])->name('sales.receipt');
-        Route::get('/sales/receipt/{sale}/pdf', [SaleController::class, 'generateReceiptPdf'])->name('sales.receipt.pdf'); // Rute baru untuk PDF
-        Route::get('sales/history', [SaleController::class, 'history'])->name('sales.history'); // New: Sales History Route
+        Route::get('/sales/receipt/{sale}/pdf', [SaleController::class, 'generateReceiptPdf'])->name('sales.receipt.pdf');
+        Route::get('/sales/history', [SaleController::class, 'history'])->name('sales.history');
 
-        // iPaymu Callback URLs (these should be publicly accessible for iPaymu to call)
-        // Ensure these routes are NOT under 'auth' middleware if iPaymu calls them directly
-        // For simplicity, placing them under tenantSlug prefix for now.
-        // In production, notifyUrl might need to be outside auth/tenant.access if iPaymu doesn't send auth info.
-        Route::any('ipaymu/return/{sale}', [SaleController::class, 'ipaymuReturn'])->name('sales.ipaymuReturn');
-        Route::any('ipaymu/cancel/{sale}', [SaleController::class, 'ipaymuCancel'])->name('sales.ipaymuCancel');
-        Route::any('ipaymu/notify', [SaleController::class, 'ipaymuNotify'])->name('sales.ipaymuNotify');
+        // Rute Callback iPaymu untuk return/cancel (masih dalam grup tenantSlug)
+        Route::get('/sales/ipaymu/return/{sale}', [SaleController::class, 'ipaymuReturn'])->name('sales.ipaymuReturn');
+        Route::get('/sales/ipaymu/cancel/{sale}', [SaleController::class, 'ipaymuCancel'])->name('sales.ipaymuCancel');
     });
+
+
 
     // Contoh rute lain yang memerlukan otorisasi tenant
     // Route::get('/{tenantSlug}/products', [ProductController::class, 'index'])->middleware('tenant.access')->name('tenant.products');
@@ -178,6 +177,10 @@ Route::middleware('auth')->group(function () {
      * ############### USER AREA ###############
      */
 });
+
+// Rute notify iPaymu (webhook) - DIPINDAHKAN KELUAR DARI GRUP tenantSlug
+// Ini harus dapat diakses secara global oleh iPaymu
+Route::post('/sales/ipaymu/notify', [SaleController::class, 'ipaymuNotify'])->name('sales.ipaymuNotify');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
