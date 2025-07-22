@@ -86,6 +86,16 @@ const currentSortDirection = ref(props.filters.sortDirection);
 const currentSearch = ref(props.filters.search || '');
 const currentFilterField = ref(props.filters.filterField || 'name'); // Default filter field
 
+// Function to handle sorting
+const handleSort = (field: string) => {
+    if (currentSortBy.value === field) {
+        currentSortDirection.value = currentSortDirection.value === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSortBy.value = field;
+        currentSortDirection.value = 'asc';
+    }
+};
+
 // Form state for adding/editing products
 const form = useForm({
     id: null as string | null, // Used for editing
@@ -98,8 +108,8 @@ const form = useForm({
     unit: '',
     image: null as File | null, // For new image upload
     current_image: null as string | null, // To display current image for editing
-    clear_image: false, // Flag to indicate if current image should be cleared
-    is_food_item: false,
+    clear_image: false as boolean, // Flag to indicate if current image should be cleared
+    is_food_item: false as boolean,
     ingredients: '',
 });
 
@@ -162,8 +172,7 @@ const submitForm = () => {
 
     if (form.id) {
         // Update existing product
-        form.post(route('products.update', { tenantSlug: props.tenantSlug, product: form.id }), {
-            _method: 'put', // Important for file uploads with PUT/PATCH
+        form.put(route('products.update', { tenantSlug: props.tenantSlug, product: form.id }), {
             onSuccess: () => {
                 isFormDialogOpen.value = false;
                 form.reset();
@@ -206,8 +215,6 @@ const deleteProduct = () => {
         onError: () => {
             // Handle error, maybe show a toast
         },
-    }, {
-        preserveScroll: true, // Keep scroll position after deletion
     });
 };
 
@@ -243,15 +250,6 @@ const applySearch = () => {
             only: ['products', 'filters'],
         });
     }, 300); // Debounce for 300ms
-};
-
-const handleSort = (field: string) => {
-    if (currentSortBy.value === field) {
-        currentSortDirection.value = currentSortDirection.value === 'asc' ? 'desc' : 'asc';
-    } else {
-        currentSortBy.value = field;
-        currentSortDirection.value = 'asc';
-    }
 };
 
 // Helper to get full image URL
