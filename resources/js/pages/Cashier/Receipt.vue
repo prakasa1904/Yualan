@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, usePage, Link } from '@inertiajs/vue3';
+import { Head, usePage, Link, router } from '@inertiajs/vue3'; // Import router
 import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
-import { Printer, CheckCircle, XCircle, Clock } from 'lucide-vue-next';
+import { Printer, CheckCircle, XCircle, Clock, Wallet } from 'lucide-vue-next'; // Import Wallet icon
 import { formatCurrency } from '@/utils/formatters'; // Import formatCurrency helper
 
 interface SaleItem {
@@ -103,6 +103,33 @@ const printReceipt = () => {
     // Redirect to the Laravel route that generates the PDF
     window.open(route('sales.receipt.pdf', { tenantSlug: props.tenantSlug, sale: props.sale.id }), '_blank');
 };
+
+// New function to re-initiate iPaymu payment
+const reinitiateIpaymuPayment = () => {
+    router.post(route('sales.reinitiatePayment', { tenantSlug: props.tenantSlug, sale: props.sale.id }), {}, {
+        onSuccess: (page: any) => {
+            // Check if the backend returned a redirect URL for iPaymu
+            if (page.props.ipaymuRedirectUrl) {
+                window.location.href = page.props.ipaymuRedirectUrl;
+            } else {
+                // If no redirect URL, maybe show a success message or just refresh the page
+                // The page should already be updated by Inertia on success
+                alert('Permintaan pembayaran ulang berhasil diproses. Silakan periksa status transaksi.');
+            }
+        },
+        onError: (errors) => {
+            console.error('Error re-initiating iPaymu payment:', errors);
+            alert('Gagal memulai pembayaran ulang: ' + (errors.message || 'Terjadi kesalahan.'));
+        },
+        preserveScroll: true,
+    });
+};
+
+// Computed property to determine if the "Pay Now" button should be shown
+const showPayNowButton = computed(() => {
+    return props.sale.payment_method === 'ipaymu' &&
+           (props.sale.status === 'pending' || props.sale.status === 'failed' || props.sale.status === 'cancelled');
+});
 </script>
 
 <template>
@@ -115,6 +142,9 @@ const printReceipt = () => {
                     Resi Penjualan
                 </h1>
                 <div class="flex gap-2">
+                    <Button v-if="showPayNowButton" @click="reinitiateIpaymuPayment" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+                        <Wallet class="h-4 w-4" /> Bayar Sekarang (iPaymu)
+                    </Button>
                     <Button @click="printReceipt" class="flex items-center gap-2">
                         <Printer class="h-4 w-4" /> Cetak Resi (PDF)
                     </Button>

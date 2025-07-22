@@ -136,7 +136,7 @@
             <span class="item-qty-price" style="text-align: right;">Harga x Qty</span>
             <span class="item-subtotal">Subtotal</span>
         </div>
-        @foreach($sale->sale_items as $item)
+        @foreach($sale->saleItems as $item)
             <div class="item-row text-body">
                 <span class="item-name">{{ $item->product->name }} ({{ $item->product->unit ?? 'pcs' }})</span>
                 <span class="item-qty-price">{{ number_format($item->price, 0, ',', '.') }} x {{ $item->quantity }}</span>

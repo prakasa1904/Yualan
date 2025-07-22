@@ -79,7 +79,7 @@ class IpaymuService
 
         try {
             $response = Http::withHeaders($headers)
-                ->{$method}($url, $body);
+                            ->{$method}($url, $body);
 
             $response->throw(); // Melemparkan pengecualian jika terjadi kesalahan klien atau server
 
@@ -151,6 +151,23 @@ class IpaymuService
             'transactionId' => $transactionId,
         ];
         return $this->callApi('post', '/transaction', $body);
+    }
+
+    /**
+     * Initiate a refund for a completed transaction.
+     *
+     * @param string $transactionId The iPaymu transaction ID to refund.
+     * @param float $amount The amount to refund.
+     * @return array The API response from iPaymu.
+     * @throws \Exception If the API call fails.
+     */
+    public function refundTransaction(string $transactionId, float $amount): array
+    {
+        $body = [
+            'transactionId' => $transactionId,
+            'amount' => $amount,
+        ];
+        return $this->callApi('post', '/refund', $body); // Assuming /refund is the endpoint
     }
 
     /**

@@ -319,6 +319,31 @@ class SaleController extends Controller
     }
 
     /**
+     * Re-initiate iPaymu payment for an existing sale.
+     */
+    public function reinitiatePayment(string $tenantSlug, Sale $sale): Response|RedirectResponse
+    {
+        $tenant = Tenant::where('slug', $tenantSlug)->firstOrFail();
+
+        // Ensure the authenticated user belongs to this tenant AND the sale belongs to this tenant
+        if (Auth::user()->tenant_id !== $tenant->id || $sale->tenant_id !== $tenant->id) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // Ensure the sale is actually pending or failed and uses iPaymu
+        if ($sale->payment_method !== 'ipaymu' || !in_array($sale->status, ['pending', 'failed', 'cancelled'])) {
+            return redirect()->route('sales.receipt', ['tenantSlug' => $tenantSlug, 'sale' => $sale->id])
+                             ->with('error', 'Pembayaran untuk penjualan ini tidak dapat diinisiasi ulang.');
+        }
+
+        // Reload sale items to ensure they are available for payment initiation
+        $sale->load('saleItems.product');
+
+        // Call the public initiateIpaymuPayment method
+        return $this->initiateIpaymuPayment($sale, $tenant);
+    }
+    
+    /**
      * Display the sales receipt page.
      */
     public function receipt(string $tenantSlug, Sale $sale): Response

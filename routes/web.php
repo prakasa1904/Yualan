@@ -5,6 +5,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\TenantLinkController;
+use App\Http\Controllers\TenantSettingsController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -84,7 +85,12 @@ Route::middleware('auth')->group(function () {
      */
     Route::get('/dashboard', function () {
         // Eager load the tenant relationship to ensure it's available
-        $user = auth()->user()->load('tenant');
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if ($user) {
+            // Ensure $user is an Eloquent model instance
+            $user = \App\Models\User::find($user->id);
+            $user->load('tenant');
+        }
 
         // Prioritize redirect for Superadmin
         if ($user && $user->role === 'superadmin') {
@@ -161,10 +167,15 @@ Route::middleware('auth')->group(function () {
         Route::get('/sales/receipt/{sale}', [SaleController::class, 'receipt'])->name('sales.receipt');
         Route::get('/sales/receipt/{sale}/pdf', [SaleController::class, 'generateReceiptPdf'])->name('sales.receipt.pdf');
         Route::get('/sales/history', [SaleController::class, 'history'])->name('sales.history');
+        Route::post('/sales/{sale}/reinitiate-payment', [SaleController::class, 'reinitiatePayment'])->name('sales.reinitiatePayment');
 
         // Rute Callback iPaymu untuk return/cancel (masih dalam grup tenantSlug)
         Route::get('/sales/ipaymu/return/{sale}', [SaleController::class, 'ipaymuReturn'])->name('sales.ipaymuReturn');
         Route::get('/sales/ipaymu/cancel/{sale}', [SaleController::class, 'ipaymuCancel'])->name('sales.ipaymuCancel');
+        
+        // Tenant Settings Routes
+        Route::get('/settings/tenant-info', [TenantSettingsController::class, 'edit'])->name('tenant.settings.info');
+        Route::patch('/settings/tenant-info', [TenantSettingsController::class, 'update'])->name('tenant.settings.update');
     });
 
 

@@ -38,17 +38,18 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
+        $user = $request->user();
 
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => $request->user() ? array_merge(
-                    $request->user()->toArray(),
+                'user' => $user ? array_merge(
+                    $user->toArray(),
                     // Pastikan relasi 'tenant' dimuat di sini jika user memiliki tenant_id
                     // dan tambahkan ke array yang dibagikan ke frontend.
-                    $request->user()->tenant_id ? ['tenant' => $request->user()->tenant] : []
+                    $user->tenant_id ? ['tenant' => $user->tenant] : []
                 ) : null,
             ],
             'ziggy' => [
@@ -56,6 +57,7 @@ class HandleInertiaRequests extends Middleware
                 'location' => $request->url(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'tenantSlug' => $user && $user->tenant ? $user->tenant->slug : null,
         ];
     }
 }
