@@ -1,3 +1,6 @@
+
+<img width="1080" height="1080" alt="Yualan POS" src="https://github.com/user-attachments/assets/648476f4-4d6a-40c2-8b2c-2496bf736a8a" />
+
 # **Yualan: Aplikasi POS SaaS (GPLv2)**
 
 Selamat datang di repositori **Yualan**, sebuah aplikasi Point of Sale (POS) berbasis **SaaS (Software as a Service)** yang dikembangkan dengan semangat *open source*. Yualan dirancang untuk memberikan solusi manajemen bisnis yang efisien dan fleksibel, kini tersedia di bawah **GNU General Public License v2.0 (GPLv2)**.
