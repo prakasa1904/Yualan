@@ -60,12 +60,12 @@ const mainNavItems = computed<NavItem[]>(() => {
 const footerNavItems: NavItem[] = [
     {
         title: 'Github Repo',
-        href: 'https://github.com/laravel/vue-starter-kit',
+        href: 'https://github.com/Abdurozzaq/Yualan',
         icon: Folder,
     },
     {
         title: 'Documentation',
-        href: 'https://yualan.com/documentation',
+        href: 'https://github.com/Abdurozzaq/Yualan',
         icon: BookOpen,
     },
 ];
