@@ -9,6 +9,7 @@ use App\Http\Controllers\TenantSettingsController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -139,14 +140,8 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('TenantUnassigned');
     })->name('tenant.unassigned');
 
-    Route::get('/{tenantSlug}/dashboard', function ($tenantSlug) {
-        // Anda bisa mendapatkan objek tenant di sini jika perlu data lain
-        $tenant = \App\Models\Tenant::where('slug', $tenantSlug)->firstOrFail();
-        return Inertia::render('Dashboard', [
-            'tenantSlug' => $tenantSlug,
-            'tenantName' => $tenant->name, // Kirim nama tenant juga
-        ]);
-    })->middleware('tenant.access')->name('tenant.dashboard');
+    Route::get('/{tenantSlug}/dashboard', [DashboardController::class, 'index'])
+        ->middleware('tenant.access')->name('tenant.dashboard');
 
     Route::resource('{tenantSlug}/categories', CategoryController::class)
         ->middleware('tenant.access');
