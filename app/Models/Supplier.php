@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str; // Untuk UUID
 
-class Product extends Model
+class Supplier extends Model
 {
     use HasFactory, SoftDeletes;
 
@@ -34,17 +34,12 @@ class Product extends Model
     protected $fillable = [
         'id',
         'tenant_id',
-        'category_id',
         'name',
-        'sku',
-        'description',
-        'price',
-        'stock',
-        'unit',
-        'image',
-        'is_food_item',
-        'ingredients',
-        'cost_price', // Pastikan ini ada di fillable
+        'contact_person',
+        'phone',
+        'email',
+        'address',
+        'notes',
     ];
 
     /**
@@ -57,11 +52,6 @@ class Product extends Model
         return [
             'id' => 'string',
             'tenant_id' => 'string',
-            'category_id' => 'string',
-            'price' => 'decimal:2', // Cast to decimal with 2 places
-            'cost_price' => 'decimal:2', // Pastikan ini di-cast juga
-            'stock' => 'integer',   // Cast to integer
-            'is_food_item' => 'boolean', // Cast to boolean
         ];
     }
 
@@ -79,19 +69,10 @@ class Product extends Model
     }
 
     /**
-     * Get the tenant that owns the Product.
+     * Get the tenant that owns the Supplier.
      */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
-
-    /**
-     * Get the category that the Product belongs to.
-     */
-    public function category(): BelongsTo
-    {
-        return $this->belongsTo(Category::class);
-    }
 }
-

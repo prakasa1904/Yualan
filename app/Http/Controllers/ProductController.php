@@ -37,7 +37,7 @@ class ProductController extends Controller
         $filterField = $request->input('filterField');
 
         $productsQuery = Product::where('tenant_id', $tenantId)
-            ->with('category'); // Eager load category relationship
+                                ->with('category'); // Eager load category relationship
 
         // Apply search filter
         if ($search) {
@@ -47,10 +47,10 @@ class ProductController extends Controller
                 } else {
                     // Default search across common fields
                     $query->where('name', 'ILIKE', '%' . $search . '%')
-                        ->orWhere('sku', 'ILIKE', '%' . $search . '%')
-                        ->orWhere('description', 'ILIKE', '%' . $search . '%')
-                        ->orWhere('unit', 'ILIKE', '%' . $search . '%')
-                        ->orWhere('ingredients', 'ILIKE', '%' . $search . '%');
+                          ->orWhere('sku', 'ILIKE', '%' . $search . '%')
+                          ->orWhere('description', 'ILIKE', '%' . $search . '%')
+                          ->orWhere('unit', 'ILIKE', '%' . $search . '%')
+                          ->orWhere('ingredients', 'ILIKE', '%' . $search . '%');
                 }
             });
         }
@@ -64,7 +64,7 @@ class ProductController extends Controller
         // Get categories for the dropdown in the frontend form
         $categories = Category::where('tenant_id', $tenantId)->orderBy('name')->get(['id', 'name']);
 
-        return Inertia::render('products/Index', [
+        return Inertia::render('Products/Index', [
             'products' => $products,
             'filters' => [
                 'sortBy' => $sortBy,
@@ -102,6 +102,7 @@ class ProductController extends Controller
             })],
             'description' => ['nullable', 'string', 'max:1000'],
             'price' => ['required', 'numeric', 'min:0'],
+            'cost_price' => ['required', 'numeric', 'min:0'], // Added cost_price validation
             'stock' => ['required', 'integer', 'min:0'],
             'unit' => ['nullable', 'string', 'max:50'],
             'image' => ['nullable', 'image', 'max:2048'], // Max 2MB
@@ -124,6 +125,7 @@ class ProductController extends Controller
             'sku' => $request->sku,
             'description' => $request->description,
             'price' => $request->price,
+            'cost_price' => $request->cost_price, // Save cost_price
             'stock' => $request->stock,
             'unit' => $request->unit,
             'image' => $imagePath,
@@ -157,12 +159,13 @@ class ProductController extends Controller
             })->ignore($product->id)],
             'description' => ['nullable', 'string', 'max:1000'],
             'price' => ['required', 'numeric', 'min:0'],
+            'cost_price' => ['required', 'numeric', 'min:0'], // Added cost_price validation
             'stock' => ['required', 'integer', 'min:0'],
             'unit' => ['nullable', 'string', 'max:50'],
             'image' => ['nullable', 'image', 'max:2048'], // Max 2MB
             'is_food_item' => ['boolean'],
             'ingredients' => ['nullable', 'string', 'max:1000'],
-            'current_image' => ['nullable', 'string'], // To handle image deletion/retention
+            'clear_image' => ['boolean'], // Added to handle explicit image removal
         ]);
 
         $imagePath = $product->image; // Keep existing image by default
@@ -187,6 +190,7 @@ class ProductController extends Controller
             'sku' => $request->sku,
             'description' => $request->description,
             'price' => $request->price,
+            'cost_price' => $request->cost_price, // Update cost_price
             'stock' => $request->stock,
             'unit' => $request->unit,
             'image' => $imagePath,

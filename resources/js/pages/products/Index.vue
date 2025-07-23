@@ -2,7 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, usePage, useForm, Link, router } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, nextTick } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,30 +12,27 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { LoaderCircle, PlusCircle, Edit, Trash2, ChevronUp, ChevronDown, Search, Image as ImageIcon, XCircle } from 'lucide-vue-next';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox'; // Import Checkbox for is_food_item
+import { Checkbox } from '@/components/ui/checkbox';
+import { formatCurrency } from '@/utils/formatters'; // Import formatCurrency
 
 // Props from controller
 interface Product {
     id: string;
     tenant_id: string;
     category_id: string | null;
-    category?: { id: string; name: string }; // Eager loaded category
+    category?: { id: string; name: string }; // Optional category object
     name: string;
     sku: string | null;
     description: string | null;
-    price: number | string | null; // Changed to allow string or null for debugging
+    price: number;
+    cost_price: number; // New field
     stock: number;
     unit: string | null;
     image: string | null;
-    is_food_item: boolean;
-    ingredients: string | null;
+    is_food_item: boolean; // New field
+    ingredients: string | null; // New field
     created_at: string;
     updated_at: string;
-}
-
-interface CategoryOption {
-    id: string;
-    name: string;
 }
 
 interface PaginatedProducts {
@@ -57,10 +54,15 @@ interface Filters {
     filterField: string | null;
 }
 
+interface Category {
+    id: string;
+    name: string;
+}
+
 const props = defineProps<{
     products: PaginatedProducts;
     filters: Filters;
-    categories: CategoryOption[]; // List of categories for dropdown
+    categories: Category[]; // Categories for the dropdown
     tenantSlug: string;
     tenantName: string;
 }>();
@@ -86,16 +88,6 @@ const currentSortDirection = ref(props.filters.sortDirection);
 const currentSearch = ref(props.filters.search || '');
 const currentFilterField = ref(props.filters.filterField || 'name'); // Default filter field
 
-// Function to handle sorting
-const handleSort = (field: string) => {
-    if (currentSortBy.value === field) {
-        currentSortDirection.value = currentSortDirection.value === 'asc' ? 'desc' : 'asc';
-    } else {
-        currentSortBy.value = field;
-        currentSortDirection.value = 'asc';
-    }
-};
-
 // Form state for adding/editing products
 const form = useForm({
     id: null as string | null, // Used for editing
@@ -104,19 +96,21 @@ const form = useForm({
     sku: '',
     description: '',
     price: 0,
+    cost_price: 0, // New field
     stock: 0,
     unit: '',
-    image: null as File | null, // For new image upload
-    current_image: null as string | null, // To display current image for editing
-    clear_image: false as boolean, // Flag to indicate if current image should be cleared
-    is_food_item: false as boolean,
-    ingredients: '',
+    image: null as File | null,
+    is_food_item: false as boolean, // New field
+    ingredients: '', // New field
+    _method: 'post' as 'post' | 'put', // For Inertia form method override
+    clear_image: false, // New flag for clearing image
 });
 
 // State for dialogs
 const isFormDialogOpen = ref(false);
 const isConfirmDeleteDialogOpen = ref(false);
 const productToDelete = ref<Product | null>(null);
+const currentProductImage = ref<string | null>(null); // To display existing image in edit form
 
 // Form title for dialog
 const formTitle = computed(() => (form.id ? 'Edit Produk' : 'Tambah Produk Baru'));
@@ -124,8 +118,8 @@ const formTitle = computed(() => (form.id ? 'Edit Produk' : 'Tambah Produk Baru'
 // Function to open the add/edit dialog
 const openFormDialog = (product: Product | null = null) => {
     form.reset(); // Reset form state
-    form.clear_image = false; // Reset clear image flag
-    form.image = null; // Clear file input
+    form.clearErrors(); // Clear any previous errors
+    currentProductImage.value = null; // Clear image preview
 
     if (product) {
         form.id = product.id;
@@ -133,52 +127,55 @@ const openFormDialog = (product: Product | null = null) => {
         form.name = product.name;
         form.sku = product.sku || '';
         form.description = product.description || '';
-        // Ensure price is treated as a number during edit
-        form.price = Number(product.price);
-        form.stock = product.stock;
+        form.price = product.price;
+        form.cost_price = product.cost_price; // Set cost_price
+        form.stock = product.stock || 0;
         form.unit = product.unit || '';
-        form.current_image = product.image; // Set current image path
-        form.is_food_item = product.is_food_item;
-        form.ingredients = product.ingredients || '';
+        form.is_food_item = product.is_food_item; // Set is_food_item
+        form.ingredients = product.ingredients || ''; // Set ingredients
+        form._method = 'put'; // Change method to PUT for update
+        currentProductImage.value = product.image; // Set current image for display
+    } else {
+        form._method = 'post'; // Default to POST for new creation
     }
     isFormDialogOpen.value = true;
 };
 
-// Function to handle image file selection
+// Handle image file selection
 const handleImageChange = (event: Event) => {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-        form.image = input.files[0];
-        form.clear_image = false; // If new image is selected, don't clear current
+    const target = event.target as HTMLInputElement;
+    if (target.files && target.files[0]) {
+        form.image = target.files[0];
+        form.clear_image = false; // If new image is selected, don't clear old one
     } else {
         form.image = null;
     }
 };
 
-// Function to clear the current image
-const clearCurrentImage = () => {
-    form.current_image = null;
+// Function to clear the image
+const clearImage = () => {
     form.image = null;
+    currentProductImage.value = null; // Clear displayed image
     form.clear_image = true; // Set flag to clear image on backend
+    // If there's a file input, reset it
     const fileInput = document.getElementById('image') as HTMLInputElement;
-    if (fileInput) fileInput.value = ''; // Clear file input element
+    if (fileInput) {
+        fileInput.value = '';
+    }
 };
 
 // Function to handle form submission (create or update)
 const submitForm = () => {
-    // Ensure price and stock are numbers before submission
-    form.price = Number(form.price);
-    form.stock = Number(form.stock);
-
     if (form.id) {
         // Update existing product
-        form.put(route('products.update', { tenantSlug: props.tenantSlug, product: form.id }), {
+        form.post(route('products.update', { tenantSlug: props.tenantSlug, product: form.id }), {
             onSuccess: () => {
                 isFormDialogOpen.value = false;
                 form.reset();
+                currentProductImage.value = null; // Clear image preview
             },
-            onError: () => {
-                // Errors will be displayed by InputError component
+            onError: (errors) => {
+                console.error("Form errors:", errors);
             },
         });
     } else {
@@ -187,9 +184,10 @@ const submitForm = () => {
             onSuccess: () => {
                 isFormDialogOpen.value = false;
                 form.reset();
+                currentProductImage.value = null; // Clear image preview
             },
-            onError: () => {
-                // Errors will be displayed by InputError component
+            onError: (errors) => {
+                console.error("Form errors:", errors);
             },
         });
     }
@@ -215,7 +213,19 @@ const deleteProduct = () => {
         onError: () => {
             // Handle error, maybe show a toast
         },
+    }, {
+        preserveScroll: true, // Keep scroll position after deletion
     });
+};
+
+// Function to handle sorting
+const handleSort = (field: string) => {
+    if (currentSortBy.value === field) {
+        currentSortDirection.value = currentSortDirection.value === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSortBy.value = field;
+        currentSortDirection.value = 'asc';
+    }
 };
 
 // Watch for changes in filters and trigger Inertia visit
@@ -252,12 +262,22 @@ const applySearch = () => {
     }, 300); // Debounce for 300ms
 };
 
-// Helper to get full image URL
-const getImageUrl = (path: string | null) => {
-    if (!path) return '';
-    // Assuming Laravel's storage link is set up: php artisan storage:link
-    return `/storage/${path}`;
-};
+// Computed property for image preview URL
+const imagePreviewUrl = computed(() => {
+    if (form.image) {
+        return URL.createObjectURL(form.image);
+    } else if (currentProductImage.value) {
+        return `/storage/${currentProductImage.value}`;
+    }
+    return null;
+});
+
+// Clean up URL object when component unmounts or image changes
+watch(() => form.image, (newImage, oldImage) => {
+    if (oldImage && typeof oldImage === 'object') {
+        URL.revokeObjectURL(oldImage as any); // Revoke old URL to prevent memory leaks
+    }
+});
 </script>
 
 <template>
@@ -297,7 +317,7 @@ const getImageUrl = (path: string | null) => {
                             <SelectItem value="sku">SKU</SelectItem>
                             <SelectItem value="description">Deskripsi</SelectItem>
                             <SelectItem value="unit">Unit</SelectItem>
-                            <SelectItem value="ingredients">Bahan</SelectItem>
+                            <SelectItem value="ingredients">Bahan-bahan</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -335,6 +355,7 @@ const getImageUrl = (path: string | null) => {
                                     </template>
                                 </div>
                             </TableHead>
+                            <TableHead>Kategori</TableHead>
                             <TableHead
                                 class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
                                 @click="handleSort('sku')"
@@ -347,14 +368,25 @@ const getImageUrl = (path: string | null) => {
                                     </template>
                                 </div>
                             </TableHead>
-                            <TableHead>Kategori</TableHead>
                             <TableHead
                                 class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
                                 @click="handleSort('price')"
                             >
                                 <div class="flex items-center gap-1">
-                                    Harga
+                                    Harga Jual
                                     <template v-if="currentSortBy === 'price'">
+                                        <ChevronUp v-if="currentSortDirection === 'asc'" class="h-4 w-4 text-blue-500" />
+                                        <ChevronDown v-else class="h-4 w-4 text-blue-500" />
+                                    </template>
+                                </div>
+                            </TableHead>
+                            <TableHead
+                                class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
+                                @click="handleSort('cost_price')"
+                            >
+                                <div class="flex items-center gap-1">
+                                    Harga Pokok
+                                    <template v-if="currentSortBy === 'cost_price'">
                                         <ChevronUp v-if="currentSortDirection === 'asc'" class="h-4 w-4 text-blue-500" />
                                         <ChevronDown v-else class="h-4 w-4 text-blue-500" />
                                     </template>
@@ -373,12 +405,12 @@ const getImageUrl = (path: string | null) => {
                                 </div>
                             </TableHead>
                             <TableHead>Unit</TableHead>
-                            <TableHead class="w-[120px] text-right">Aksi</TableHead>
+                            <TableHead class="w-[100px] text-right">Aksi</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         <TableRow v-if="props.products.data.length === 0">
-                            <TableCell colspan="9" class="text-center text-muted-foreground py-8">
+                            <TableCell colspan="10" class="text-center text-muted-foreground py-8">
                                 Belum ada produk yang ditambahkan atau tidak ada hasil yang cocok.
                             </TableCell>
                         </TableRow>
@@ -387,22 +419,19 @@ const getImageUrl = (path: string | null) => {
                             <TableCell>
                                 <img
                                     v-if="product.image"
-                                    :src="getImageUrl(product.image)"
+                                    :src="`/storage/${product.image}`"
                                     alt="Product Image"
                                     class="w-12 h-12 object-cover rounded-md"
                                 />
-                                <ImageIcon v-else class="w-12 h-12 text-gray-400" />
+                                <div v-else class="w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded-md flex items-center justify-center text-gray-500 dark:text-gray-400">
+                                    <ImageIcon class="w-6 h-6" />
+                                </div>
                             </TableCell>
                             <TableCell class="font-medium">{{ product.name }}</TableCell>
-                            <TableCell>{{ product.sku || '-' }}</TableCell>
                             <TableCell>{{ product.category?.name || '-' }}</TableCell>
-                            <TableCell>
-                                <!-- Debugging: Log the price value and type -->
-                                <span v-if="true">
-                                    <!-- console.log(`Product ID: ${product.id}, Price: ${product.price}, Type: ${typeof product.price}`); -->
-                                </span>
-                                {{ (Number(product.price) || 0).toFixed(2) }}
-                            </TableCell>
+                            <TableCell>{{ product.sku || '-' }}</TableCell>
+                            <TableCell>{{ formatCurrency(product.price) }}</TableCell>
+                            <TableCell>{{ formatCurrency(product.cost_price) }}</TableCell>
                             <TableCell>{{ product.stock }}</TableCell>
                             <TableCell>{{ product.unit || '-' }}</TableCell>
                             <TableCell class="text-right">
@@ -442,7 +471,7 @@ const getImageUrl = (path: string | null) => {
 
         <!-- Add/Edit Product Dialog -->
         <Dialog v-model:open="isFormDialogOpen">
-            <DialogContent class="sm:max-w-[600px]">
+            <DialogContent class="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>{{ formTitle }}</DialogTitle>
                     <DialogDescription>
@@ -458,14 +487,14 @@ const getImageUrl = (path: string | null) => {
 
                     <div class="grid grid-cols-4 items-center gap-4">
                         <Label for="category_id" class="text-right">Kategori</Label>
-                        <Select v-model="form.category_id" class="col-span-3">
+                        <Select v-model="form.category_id">
                             <SelectTrigger class="col-span-3">
-                                <SelectValue placeholder="Pilih Kategori" />
+                                <SelectValue placeholder="Pilih Kategori (Opsional)" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem :value="null">Tidak Ada Kategori</SelectItem>
-                                <SelectItem v-for="cat in props.categories" :key="cat.id" :value="cat.id">
-                                    {{ cat.name }}
+                                <SelectItem v-for="category in categories" :key="category.id" :value="category.id">
+                                    {{ category.name }}
                                 </SelectItem>
                             </SelectContent>
                         </Select>
@@ -485,52 +514,62 @@ const getImageUrl = (path: string | null) => {
                     </div>
 
                     <div class="grid grid-cols-4 items-center gap-4">
-                        <Label for="price" class="text-right">Harga</Label>
-                        <Input id="price" type="number" step="0.01" v-model.number="form.price" required class="col-span-3" />
+                        <Label for="price" class="text-right">Harga Jual</Label>
+                        <Input id="price" type="number" step="0.01" v-model.number="form.price" required class="col-span-3" min="0" />
                         <InputError :message="form.errors.price" class="col-span-4 col-start-2" />
                     </div>
 
                     <div class="grid grid-cols-4 items-center gap-4">
+                        <Label for="cost_price" class="text-right">Harga Pokok</Label>
+                        <Input id="cost_price" type="number" step="0.01" v-model.number="form.cost_price" required class="col-span-3" min="0" />
+                        <InputError :message="form.errors.cost_price" class="col-span-4 col-start-2" />
+                    </div>
+
+                    <div class="grid grid-cols-4 items-center gap-4">
                         <Label for="stock" class="text-right">Stok</Label>
-                        <Input id="stock" type="number" v-model.number="form.stock" required class="col-span-3" />
+                        <Input readonly ="stock" type="number" v-model.number="form.stock" required class="col-span-3" min="0" />
                         <InputError :message="form.errors.stock" class="col-span-4 col-start-2" />
                     </div>
 
                     <div class="grid grid-cols-4 items-center gap-4">
                         <Label for="unit" class="text-right">Unit (Opsional)</Label>
-                        <Input id="unit" v-model="form.unit" class="col-span-3" />
+                        <Input id="unit" v-model="form.unit" class="col-span-3" placeholder="e.g., pcs, kg, liter" />
                         <InputError :message="form.errors.unit" class="col-span-4 col-start-2" />
                     </div>
 
-                    <div class="grid grid-cols-4 items-start gap-4">
-                        <Label for="image" class="text-right pt-2">Gambar Produk</Label>
+                    <div class="grid grid-cols-4 items-center gap-4">
+                        <Label for="image" class="text-right">Gambar (Opsional)</Label>
                         <div class="col-span-3 flex flex-col gap-2">
-                            <Input id="image" type="file" @change="handleImageChange" accept="image/*" />
+                            <Input id="image" type="file" @change="handleImageChange" accept="image/*" class="col-span-3" />
                             <InputError :message="form.errors.image" />
-                            <div v-if="form.current_image" class="flex items-center gap-2 mt-2">
-                                <img :src="getImageUrl(form.current_image)" alt="Current Product Image" class="w-20 h-20 object-cover rounded-md border" />
-                                <Button variant="destructive" size="sm" @click="clearCurrentImage" class="flex items-center gap-1">
-                                    <XCircle class="h-4 w-4" /> Hapus Gambar
+                            <div v-if="imagePreviewUrl" class="relative w-32 h-32 border rounded-md overflow-hidden bg-gray-100 dark:bg-gray-700">
+                                <img :src="imagePreviewUrl" alt="Image Preview" class="w-full h-full object-cover" />
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    class="absolute top-1 right-1 h-6 w-6 rounded-full"
+                                    @click="clearImage"
+                                >
+                                    <XCircle class="h-4 w-4" />
                                 </Button>
                             </div>
-                            <p v-else-if="form.image" class="text-sm text-gray-500 dark:text-gray-400">
-                                File baru dipilih: {{ form.image.name }}
-                            </p>
+                            <p v-else class="text-sm text-muted-foreground">Tidak ada gambar yang dipilih.</p>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-4 items-center gap-4">
                         <Label for="is_food_item" class="text-right">Item Makanan?</Label>
-                        <div class="col-span-3 flex items-center gap-2">
+                        <div class="col-span-3 flex items-center">
                             <Checkbox id="is_food_item" v-model:checked="form.is_food_item" />
-                            <span class="text-sm text-gray-700 dark:text-gray-300">Ya</span>
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Ya, ini adalah item makanan.</span>
                         </div>
                         <InputError :message="form.errors.is_food_item" class="col-span-4 col-start-2" />
                     </div>
 
                     <div v-if="form.is_food_item" class="grid grid-cols-4 items-center gap-4">
                         <Label for="ingredients" class="text-right">Bahan-bahan (Opsional)</Label>
-                        <Textarea id="ingredients" v-model="form.ingredients" rows="3" class="col-span-3" />
+                        <Textarea id="ingredients" v-model="form.ingredients" rows="3" class="col-span-3" placeholder="Daftar bahan-bahan, pisahkan dengan koma." />
                         <InputError :message="form.errors.ingredients" class="col-span-4 col-start-2" />
                     </div>
 

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str; // Untuk UUID
 
-class Product extends Model
+class Inventory extends Model
 {
     use HasFactory, SoftDeletes;
 
@@ -34,17 +34,13 @@ class Product extends Model
     protected $fillable = [
         'id',
         'tenant_id',
-        'category_id',
-        'name',
-        'sku',
-        'description',
-        'price',
-        'stock',
-        'unit',
-        'image',
-        'is_food_item',
-        'ingredients',
-        'cost_price', // Pastikan ini ada di fillable
+        'product_id',
+        'quantity_change', // Perubahan kuantitas (positif untuk masuk, negatif untuk keluar)
+        'cost_per_unit',   // Harga pokok per unit pada saat pergerakan
+        'type',            // Tipe pergerakan (e.g., 'in', 'out', 'adjustment', 'sale', 'return')
+        'reason',          // Alasan pergerakan (e.g., 'Penerimaan barang', 'Penyesuaian stok', 'Penjualan')
+        'source_id',       // ID dari sumber pergerakan (e.g., sale_item_id, purchase_order_id)
+        'source_type',     // Tipe model dari sumber (e.g., 'App\Models\SaleItem')
     ];
 
     /**
@@ -57,11 +53,9 @@ class Product extends Model
         return [
             'id' => 'string',
             'tenant_id' => 'string',
-            'category_id' => 'string',
-            'price' => 'decimal:2', // Cast to decimal with 2 places
-            'cost_price' => 'decimal:2', // Pastikan ini di-cast juga
-            'stock' => 'integer',   // Cast to integer
-            'is_food_item' => 'boolean', // Cast to boolean
+            'product_id' => 'string',
+            'quantity_change' => 'integer',
+            'cost_per_unit' => 'decimal:2',
         ];
     }
 
@@ -79,7 +73,7 @@ class Product extends Model
     }
 
     /**
-     * Get the tenant that owns the Product.
+     * Get the tenant that owns the Inventory movement.
      */
     public function tenant(): BelongsTo
     {
@@ -87,11 +81,18 @@ class Product extends Model
     }
 
     /**
-     * Get the category that the Product belongs to.
+     * Get the product associated with the Inventory movement.
      */
-    public function category(): BelongsTo
+    public function product(): BelongsTo
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * Get the parent model (sale item, purchase order, etc.) of the inventory movement.
+     */
+    public function source()
+    {
+        return $this->morphTo();
     }
 }
-

@@ -119,6 +119,14 @@ class Sale extends Model
     }
 
     /**
+     * Get the sale items for the Sale.
+     */
+    public function sale_items(): HasMany
+    {
+        return $this->hasMany(SaleItem::class);
+    }
+
+    /**
      * Get the payments for the Sale.
      */
     public function payments(): HasMany

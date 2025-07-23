@@ -6,6 +6,9 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\TenantLinkController;
 use App\Http\Controllers\TenantSettingsController;
+use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -162,26 +165,43 @@ Route::middleware('auth')->group(function () {
 
     // Rute untuk Sales/Pemesanan dan Riwayat
     Route::prefix('{tenantSlug}')->middleware('tenant.access')->group(function () {
-        Route::get('/sales/order', [SaleController::class, 'order'])->name('sales.order');
-        Route::post('/sales/store', [SaleController::class, 'store'])->name('sales.store');
-        Route::get('/sales/receipt/{sale}', [SaleController::class, 'receipt'])->name('sales.receipt');
-        Route::get('/sales/receipt/{sale}/pdf', [SaleController::class, 'generateReceiptPdf'])->name('sales.receipt.pdf');
-        Route::get('/sales/history', [SaleController::class, 'history'])->name('sales.history');
-        Route::post('/sales/{sale}/reinitiate-payment', [SaleController::class, 'reinitiatePayment'])->name('sales.reinitiatePayment');
+        Route::get('sales/order', [SaleController::class, 'order'])->name('sales.order');
+        Route::post('sales/store', [SaleController::class, 'store'])->name('sales.store');
+        Route::get('sales/receipt/{sale}', [SaleController::class, 'receipt'])->name('sales.receipt');
+        Route::get('sales/receipt/{sale}/pdf', [SaleController::class, 'generateReceiptPdf'])->name('sales.receipt.pdf');
+        Route::get('sales/history', [SaleController::class, 'history'])->name('sales.history');
+        Route::post('sales/{sale}/reinitiate-payment', [SaleController::class, 'reinitiatePayment'])->name('sales.reinitiatePayment');
 
         // Rute Callback iPaymu untuk return/cancel (masih dalam grup tenantSlug)
-        Route::get('/sales/ipaymu/return/{sale}', [SaleController::class, 'ipaymuReturn'])->name('sales.ipaymuReturn');
-        Route::get('/sales/ipaymu/cancel/{sale}', [SaleController::class, 'ipaymuCancel'])->name('sales.ipaymuCancel');
+        Route::get('sales/ipaymu/return/{sale}', [SaleController::class, 'ipaymuReturn'])->name('sales.ipaymuReturn');
+        Route::get('sales/ipaymu/cancel/{sale}', [SaleController::class, 'ipaymuCancel'])->name('sales.ipaymuCancel');
         
+        // Report Routes
+        Route::prefix('reports')->group(function () { // Removed leading '/'
+            Route::get('gross-profit', [ReportController::class, 'grossProfitReport'])->name('reports.grossProfit'); // Removed leading '/'
+            Route::get('stock', [ReportController::class, 'stockReport'])->name('reports.stock'); // Removed leading '/'
+        });
+
+        // Master Suppliers routes, tenant-scoped (NEW)
+        Route::resource('suppliers', SupplierController::class); // Removed leading '/'
+
+        // Inventory Management Routes
+        Route::prefix('inventory')->group(function () { // Removed leading '/'
+            Route::get('overview', [InventoryController::class, 'index'])->name('inventory.overview'); // Removed leading '/'
+            Route::get('movements', [InventoryController::class, 'movements'])->name('inventory.movements'); // Removed leading '/'
+            Route::get('receive', [InventoryController::class, 'receiveGoodsForm'])->name('inventory.receive.form'); // Removed leading '/'
+            Route::post('receive', [InventoryController::class, 'receiveGoods'])->name('inventory.receive'); // Removed leading '/'
+            Route::get('adjust', [InventoryController::class, 'adjustStockForm'])->name('inventory.adjust.form'); // Removed leading '/'
+            Route::post('adjust', [InventoryController::class, 'adjustStock'])->name('inventory.adjust'); // Removed leading '/'
+            // Optional: Route for returns
+            Route::get('return', [InventoryController::class, 'returnGoodsForm'])->name('inventory.return.form'); // Removed leading '/'
+            Route::post('return', [InventoryController::class, 'returnGoods'])->name('inventory.return'); // Removed leading '/'
+        });
+
         // Tenant Settings Routes
-        Route::get('/settings/tenant-info', [TenantSettingsController::class, 'edit'])->name('tenant.settings.info');
-        Route::patch('/settings/tenant-info', [TenantSettingsController::class, 'update'])->name('tenant.settings.update');
+        Route::get('settings/tenant-info', [TenantSettingsController::class, 'edit'])->name('tenant.settings.info'); // Removed leading '/'
+        Route::patch('settings/tenant-info', [TenantSettingsController::class, 'update'])->name('tenant.settings.update'); // Removed leading '/'
     });
-
-
-
-    // Contoh rute lain yang memerlukan otorisasi tenant
-    // Route::get('/{tenantSlug}/products', [ProductController::class, 'index'])->middleware('tenant.access')->name('tenant.products');
 
     /**
      * END

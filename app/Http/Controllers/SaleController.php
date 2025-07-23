@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Payment; // Import Payment model
+use App\Models\Inventory; // Import Inventory model for logging movements
 use App\Services\IpaymuService; // Import IpaymuService
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -186,11 +187,25 @@ class SaleController extends Controller
         // Save sale items and reduce stock
         foreach ($saleItemsData as $itemData) {
             // Ensure SaleItem model exists and has 'id' in $fillable
-            $sale->saleItems()->create(array_merge($itemData, ['id' => Str::uuid()])); // Generate UUID for SaleItem
+            $saleItem = $sale->saleItems()->create(array_merge($itemData, ['id' => Str::uuid()])); // Generate UUID for SaleItem
+            
             // Reduce product stock
             $product = Product::find($itemData['product_id']);
             $product->stock -= $itemData['quantity'];
             $product->save();
+
+            // Log inventory movement for 'out' (sale)
+            Inventory::create([
+                'id' => Str::uuid(),
+                'tenant_id' => $tenant->id,
+                'product_id' => $product->id,
+                'quantity_change' => -$itemData['quantity'], // Use quantity_change for stock reduction
+                'type' => 'out', // Movement type for sale
+                'reason' => 'Penjualan: ' . $sale->invoice_number,
+                'user_id' => Auth::id(),
+                'cost_price_at_movement' => $product->cost_price, // Use product's current cost price
+                'related_sale_item_id' => $saleItem->id, // Link to the specific sale item
+            ]);
         }
 
         // If payment method is iPaymu, initiate payment
@@ -241,7 +256,7 @@ class SaleController extends Controller
             'price' => $prices,
             'returnUrl' => route('sales.ipaymuReturn', ['tenantSlug' => $tenant->slug, 'sale' => $sale->id]), // Corrected route name
             'cancelUrl' => route('sales.ipaymuCancel', ['tenantSlug' => $tenant->slug, 'sale' => $sale->id]), // Corrected route name
-            'notifyUrl' => route('sales.ipaymuNotify', ['tenantSlug' => $tenant->slug]), // Corrected to use route helper
+            'notifyUrl' => route('sales.ipaymuNotify'), // Corrected to use route helper without tenantSlug
             'buyerName' => $buyerName,
             'buyerEmail' => $buyerEmail,
             'buyerPhone' => $buyerPhone,
@@ -333,7 +348,7 @@ class SaleController extends Controller
         // Ensure the sale is actually pending or failed and uses iPaymu
         if ($sale->payment_method !== 'ipaymu' || !in_array($sale->status, ['pending', 'failed', 'cancelled'])) {
             return redirect()->route('sales.receipt', ['tenantSlug' => $tenantSlug, 'sale' => $sale->id])
-                             ->with('error', 'Pembayaran untuk penjualan ini tidak dapat diinisiasi ulang.');
+                ->with('error', 'Pembayaran untuk penjualan ini tidak dapat diinisiasi ulang.');
         }
 
         // Reload sale items to ensure they are available for payment initiation
@@ -342,7 +357,7 @@ class SaleController extends Controller
         // Call the public initiateIpaymuPayment method
         return $this->initiateIpaymuPayment($sale, $tenant);
     }
-    
+
     /**
      * Display the sales receipt page.
      */
@@ -548,6 +563,23 @@ class SaleController extends Controller
                         'notes' => 'Pembayaran berhasil via iPaymu (TRX ID: ' . $transactionId . ')',
                     ]);
                     Log::info('iPaymu Notify: Sale ID ' . $sale->id . ' updated to completed.');
+
+                    // Log inventory movements for 'out' (sale)
+                    $sale->load('saleItems.product'); // Ensure sale items and products are loaded
+                    foreach ($sale->saleItems as $saleItem) {
+                        Inventory::create([
+                            'id' => Str::uuid(),
+                            'tenant_id' => $sale->tenant_id,
+                            'product_id' => $saleItem->product_id,
+                            'quantity_change' => -$saleItem->quantity, // Use quantity_change for stock reduction
+                            'type' => 'out',
+                            'reason' => 'Penjualan iPaymu: ' . $sale->invoice_number,
+                            'user_id' => $sale->user_id, // User yang membuat penjualan
+                            'cost_price_at_movement' => $saleItem->product->cost_price, // Use product's current cost price
+                            'related_sale_item_id' => $saleItem->id,
+                        ]);
+                        Log::info('iPaymu Notify: Inventory "out" logged for product ' . $saleItem->product_id . ' (Sale ID: ' . $sale->id . ')');
+                    }
 
                     // Update or create Payment record
                     $payment = Payment::firstOrNew(['transaction_id' => $transactionId, 'sale_id' => $sale->id]);
