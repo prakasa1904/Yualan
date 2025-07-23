@@ -1,30 +1,81 @@
 
-<img width="1080" height="1080" alt="Yualan POS" src="https://github.com/user-attachments/assets/648476f4-4d6a-40c2-8b2c-2496bf736a8a" />
+<img width="1080" height="1080" alt="New Website Blue Mockup Instagram - Laptop" src="https://github.com/user-attachments/assets/f4960632-a9a1-4a45-aa05-74e8acd74834" />
 
-# **Yualan: Aplikasi POS SaaS (GPLv2)**
+# ✨ Yualan POS – Full Feature Note
 
-Selamat datang di repositori **Yualan**, sebuah aplikasi Point of Sale (POS) berbasis **SaaS (Software as a Service)** yang dikembangkan dengan semangat *open source*. Yualan dirancang untuk memberikan solusi manajemen bisnis yang efisien dan fleksibel, kini tersedia di bawah **GNU General Public License v2.0 (GPLv2)**.
-
-Dengan lisensi GPLv2, Anda bebas untuk menggunakan, mempelajari, memodifikasi, dan mendistribusikan ulang perangkat lunak ini. Kami mendorong kolaborasi dan kontribusi dari komunitas untuk terus meningkatkan dan mengembangkan Yualan bersama.
-
-### **Tentang Yualan:**
-
-Yualan bertujuan untuk menyederhanakan operasional bisnis Anda dengan fitur-fitur utama seperti:
-
-* **Manajemen Penyewa:** Pengelolaan detail penyewa dan integrasi pembayaran (misalnya Ipaymu).
-* **Akses Berbasis Peran:** Sistem login untuk Superadmin, Kasir, dan Admin (Pemilik Penyewa).
-* **Data Master Lengkap:** Pengelolaan Produk, Pelanggan, dan Kategori yang terstruktur.
-* **Alur Transaksi Mulus:** Dari pembuatan Pesanan, pilihan Pembayaran (tunai/digital), pencetakan Kwitansi, hingga Riwayat Pemesanan yang komprehensif.
-
-### **Kontribusi & Kolaborasi:**
-
-Kami sangat menyambut kontribusi dari para pengembang! Baik itu perbaikan *bug*, penambahan fitur baru, atau peningkatan dokumentasi, setiap kontribusi akan sangat dihargai. Silakan baca panduan kontribusi kami untuk detail lebih lanjut.
-
-### **Lisensi:**
-
-Perangkat lunak ini didistribusikan di bawah **GNU General Public License v2.0**. Lihat file `LICENSE` untuk informasi selengkapnya.
+**Yualan** adalah aplikasi **Point of Sale (POS)** berbasis **SaaS (Software as a Service)** yang dirancang untuk menyederhanakan dan mengotomatiskan operasional bisnis ritel Anda. Dibangun dengan semangat open source, Yualan kini tersedia di bawah **GNU General Public License v2.0 (GPLv2)** — artinya Anda bebas untuk menggunakan, memodifikasi, dan mendistribusikannya.
 
 ---
 
-Mari kita bangun solusi POS yang lebih baik bersama!
-Yualan - Yuk Jualan!
+## 🎯 Tujuan Utama
+
+Yualan hadir sebagai solusi POS ringan namun powerful yang cocok untuk bisnis ritel modern, UMKM, dan pelaku usaha yang ingin memulai sistem penjualan berbasis cloud tanpa biaya lisensi mahal.
+
+---
+
+## 🧩 Fitur Utama
+
+### 1. 👥 **Manajemen Penyewa (Multi-Tenant System)**
+- Pengelolaan penyewa/tenant dalam satu sistem POS
+- Integrasi pembayaran otomatis dengan gateway seperti **iPaymu**
+
+### 2. 🔐 **Akses Berbasis Peran**
+- **Superadmin**: Mengelola sistem dan semua penyewa
+- **Admin (Pemilik Toko)**: Mengelola toko dan data bisnis mereka
+- **Kasir**: Akses terbatas untuk penjualan & transaksi saja
+
+### 3. 🗃️ **Data Master**
+- **Produk**: SKU, kategori, harga, dan stok
+- **Pelanggan**: Data kontak, histori transaksi
+- **Kategori Produk**: Kelompokkan item dengan mudah
+
+### 4. 💵 **Alur Transaksi yang Efisien**
+- Pembuatan **Pesanan** dan pemrosesan cepat
+- Pilihan **Metode Pembayaran**: Tunai, QRIS, E-Wallet
+- **Kwitansi** otomatis dan bisa dicetak
+- **Riwayat Pemesanan** lengkap dan dapat difilter
+
+---
+
+## 🆕 Fitur Inventaris Terbaru (NEW!)
+
+Kini Yualan POS semakin lengkap dengan modul **Manajemen Inventaris** dan **Laporan Laba**:
+
+### 📦 **Modul Inventaris Lengkap**
+- **Supplier**: Kelola informasi pemasok dengan mudah
+- **Inventaris & Ringkasan**: Lihat stok per produk secara real-time
+- **Riwayat Pergerakan**: Telusuri keluar/masuk barang
+- **Penerimaan Barang**: Catat pembelian dan penambahan stok
+- **Penyesuaian Stok**: Update manual untuk koreksi stok fisik
+
+### 📊 **Modul Laporan Bisnis**
+- **Laba Kotor (Gross Profit)**: Lihat profit dari penjualan dikurangi harga pokok
+- **Nilai Stok**: Total nilai barang yang tersedia di gudang
+
+---
+
+## 🤝 Kontribusi & Komunitas
+
+Kami sangat terbuka untuk kolaborasi!  
+Silakan bantu kami dengan:
+- Menemukan dan memperbaiki bug
+- Menambahkan fitur baru
+- Meningkatkan dokumentasi
+
+Semua ide dan pull request akan kami tinjau dengan senang hati.
+
+---
+
+## 📜 Lisensi
+
+Yualan POS didistribusikan di bawah **GNU GPL v2.0 License**.  
+Lihat file `LICENSE` untuk informasi lebih lanjut.
+
+---
+
+## 💬 Yuk Jualan dengan Yualan!
+
+Mulailah perjalanan digitalisasi bisnis Anda bersama Yualan.  
+Solusi POS open-source yang ringan, fleksibel, dan siap berkembang bersama komunitas.
+
+**Yualan POS – Yuk Jualan!**
