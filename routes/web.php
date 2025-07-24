@@ -10,6 +10,7 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\SuperadminDashboardController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -120,9 +121,9 @@ Route::middleware('auth')->group(function () {
      */
 
     // Rute khusus untuk Superadmin Dashboard
-    Route::get('/superadmin/dashboard', function () {
-        return Inertia::render('SuperadminDashboard');
-    })->middleware(['superadmin.access'])->name('superadmin.dashboard');
+    Route::get('/superadmin/dashboard', [SuperadminDashboardController::class, 'index'])
+        ->middleware(['superadmin.access'])->name('superadmin.dashboard');
+
 
     /**
      * END

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str; // Untuk UUID
 
@@ -72,10 +73,12 @@ class Category extends Model
         return $this->belongsTo(Tenant::class);
     }
 
-    // Anda mungkin akan memiliki relasi ke produk di masa mendatang
-    // public function products(): HasMany
-    // {
-    //     return $this->hasMany(Product::class);
-    // }
+    /**
+     * Get the products associated with the Category.
+     */
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
 }
 
