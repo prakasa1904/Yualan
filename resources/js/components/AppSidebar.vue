@@ -83,7 +83,7 @@ const footerNavItems: NavItem[] = [
     },
     {
         title: 'Documentation',
-        href: 'https://yualan.com/documentation',
+        href: 'https://yualan.or.id',
         icon: BookOpen,
     },
 ];
