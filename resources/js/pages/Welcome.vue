@@ -120,12 +120,7 @@ const features = [
                     >
                         Mulai Sekarang
                     </Link>
-                    <Link
-                        :href="route('register')"
-                        class="w-full sm:w-auto px-10 py-4 rounded-full text-xl font-bold border-2 border-white text-white hover:bg-white hover:text-indigo-700 transition-all duration-300 shadow-xl transform hover:scale-105"
-                    >
-                        Daftar Gratis
-                    </Link>
+                
                 </div>
             </div>
         </section>
