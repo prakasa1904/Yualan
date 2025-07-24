@@ -193,9 +193,11 @@ Route::middleware('auth')->group(function () {
             Route::post('return', [InventoryController::class, 'returnGoods'])->name('inventory.return'); // Removed leading '/'
         });
 
-        // Tenant Settings Routes
-        Route::get('settings/tenant-info', [TenantSettingsController::class, 'edit'])->name('tenant.settings.info'); // Removed leading '/'
-        Route::patch('settings/tenant-info', [TenantSettingsController::class, 'update'])->name('tenant.settings.update'); // Removed leading '/'
+        Route::prefix('settings')->middleware(['tenant.access', 'admin.access'])->group(function () {
+            Route::get('tenant-info', [TenantSettingsController::class, 'edit'])->name('tenant.settings.info');
+            Route::patch('tenant-info', [TenantSettingsController::class, 'update'])->name('tenant.settings.update');
+            Route::post('tenant-info/generate-code', [TenantSettingsController::class, 'generateInvitationCode'])->name('tenant.settings.generateInvitationCode');
+        });
     });
 
     /**
