@@ -63,6 +63,7 @@ const generateNewCode = () => {
         onSuccess: () => {
             // The `watch` effect above will automatically update `form.invitation_code`
             // when `props.newInvitationCode` is received.
+            window.location.reload(); // Optionally reload the page to reflect changes immediately
         },
         onError: (errors) => {
             console.error("Error generating code:", errors);

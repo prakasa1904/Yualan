@@ -25,7 +25,7 @@ class TenantSettingsController extends Controller
             abort(403, 'Anda tidak memiliki akses ke tenant ini.');
         }
 
-        return Inertia::render('TenantSettings/TenantInfo', [
+        return Inertia::render('settings/TenantInfo', [
             'tenant' => [
                 'name' => $tenant->name,
                 'ipaymu_api_key' => $tenant->ipaymu_api_key,

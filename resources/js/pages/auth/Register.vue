@@ -58,7 +58,7 @@ const pageDescription = computed(() => {
             return 'Masukkan detail yang akan Anda gunakan untuk masuk.';
         case 3:
             return registrationType.value === 'personal'
-                ? 'Masukkan kode undangan Anda dan tunggu persetujuan admin.'
+                ? 'Masukkan kode undangan Anda'
                 : 'Lengkapi informasi perusahaan Anda.';
         default:
             return 'Lengkapi detail Anda untuk membuat akun.';
@@ -118,7 +118,7 @@ const submit = () => {
                         Daftar sebagai Perorangan
                     </Button>
                     <p class="text-sm text-center text-muted-foreground">
-                        Jika Anda mendaftar sebagai perorangan, Anda memerlukan kode undangan. Akun Anda akan memerlukan persetujuan admin setelah pendaftaran.
+                        Jika Anda mendaftar sebagai perorangan, Anda memerlukan kode undangan.
                     </p>
                 </div>
                 <div class="grid gap-4">
@@ -196,7 +196,7 @@ const submit = () => {
                     <Input id="invitation_code" type="text" required v-model="form.invitation_code" placeholder="Masukkan kode undangan Anda" />
                     <InputError :message="form.errors.invitation_code" />
                     <p class="text-sm text-muted-foreground mt-2">
-                        Setelah mendaftar, akun Anda akan menunggu persetujuan dari admin.
+                        Setelah mendaftar, akun Anda akan memerlukan kode undangan dari admin tenant. Jika tidak memiliki kode, hubungi admin Anda atau register sebagai tenant.
                     </p>
                 </div>
 
