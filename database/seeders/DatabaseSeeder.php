@@ -18,5 +18,9 @@ class DatabaseSeeder extends Seeder
             'email' => 'sa@example.com',
             'role' => 'superadmin',
         ]);
+
+        $this->call([
+            SaasSettingsSeeder::class,
+        ]);
     }
 }

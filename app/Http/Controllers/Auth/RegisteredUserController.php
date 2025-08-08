@@ -14,6 +14,7 @@ use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Support\Str; // Untuk UUID dan slug
+use Illuminate\Support\Facades\DB;
 
 class RegisteredUserController extends Controller
 {
@@ -43,7 +44,7 @@ class RegisteredUserController extends Controller
         $tenant = null; // Inisialisasi variabel tenant
         $user = null; // Inisialisasi variabel user
 
-        if ($request->registration_type === 'personal') {
+    if ($request->registration_type === 'personal') {
             // Validasi khusus untuk pendaftaran personal (Step 3 dari frontend)
             $request->validate([
                 'invitation_code' => ['required', 'string', 'exists:tenants,invitation_code'],
@@ -71,7 +72,7 @@ class RegisteredUserController extends Controller
                 // Untuk saat ini, kita asumsikan user langsung aktif atau akan diatur di logic lain.
             ]);
 
-        } elseif ($request->registration_type === 'company') {
+    } elseif ($request->registration_type === 'company') {
             // Validasi khusus untuk pendaftaran perusahaan (Step 3 dari frontend)
             $request->validate([
                 'company_name' => ['required', 'string', 'max:255'],
@@ -85,7 +86,17 @@ class RegisteredUserController extends Controller
                 'company_country' => ['nullable', 'string', 'max:255'],
             ]);
 
-            // Buat tenant baru
+            // Ambil jumlah hari trial dari saas_settings
+            $trialDays = 7; // Default
+            $trialSetting = DB::table('saas_settings')->where('key', 'trial_days')->first();
+            if ($trialSetting && is_numeric($trialSetting->value)) {
+                $trialDays = (int) $trialSetting->value;
+            }
+
+            $now = now();
+            $subscriptionEndsAt = $now->copy()->addDays($trialDays);
+
+            // Buat tenant baru dengan field trial
             $tenant = Tenant::create([
                 'id' => Str::uuid(), // Generate UUID untuk tenant
                 'name' => $request->company_name,
@@ -100,6 +111,8 @@ class RegisteredUserController extends Controller
                 'country' => $request->country, // Perbaikan: gunakan $request->country
                 'business_type' => $request->business_type,
                 'is_active' => true, // Perusahaan baru langsung aktif
+                'subscription_ends_at' => $subscriptionEndsAt,
+                'is_subscribed' => true, // Trial, belum berlangganan
             ]);
 
             // Buat user admin untuk perusahaan baru
