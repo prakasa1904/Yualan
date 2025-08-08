@@ -66,7 +66,9 @@ class SubscriptionController extends Controller
 
         $product = [$plan->plan_name];
         $qty = [1];
-        $price = [$plan->price];
+        $discount = isset($plan->discount_percentage) ? $plan->discount_percentage : 0;
+        $discountedPrice = $plan->price - ($plan->price * $discount / 100);
+        $price = [$discountedPrice];
         $description = [$plan->plan_description];
 
         $paymentData = $this->ipaymuService->createSubscriptionPayment($tenant, $plan, $product, $qty, $price, $description);
