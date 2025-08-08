@@ -9,11 +9,44 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { BookOpen, Folder, LayoutGrid, Tag, Package, Users, ShoppingBag, History, Warehouse, BarChart, Truck } from 'lucide-vue-next'; // Tambahkan Warehouse dan BarChart
 
 import AppLogo from './AppLogo.vue';
-import { computed } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+// Theme switcher logic
+const isDark = ref(false);
+const toggleTheme = () => {
+    isDark.value = !isDark.value;
+    if (isDark.value) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+};
 
 const page = usePage();
 const tenantSlug = computed(() => page.props.tenantSlug as string | undefined);
 const userRole = computed(() => page.props.auth.user?.role as string | undefined); // Dapatkan userRole dari props Inertia
+// Tenant info via AJAX to ensure fresh data even when Inertia props don't include tenant
+const tenant = ref<any | null>(null);
+
+async function fetchTenantInfo(slug?: string) {
+    if (!slug) {
+        tenant.value = null;
+        return;
+    }
+    try {
+        // Prefer Ziggy route if available
+        const url = route ? route('tenant.info', { tenantSlug: slug }) : `/${slug}/tenant/info`;
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        tenant.value = await res.json();
+    } catch (e) {
+        console.error('Failed to fetch tenant info', e);
+        tenant.value = null;
+    }
+}
+
+// Fetch on mount and whenever tenantSlug changes
+onMounted(() => fetchTenantInfo(tenantSlug.value));
+watch(tenantSlug, (slug) => fetchTenantInfo(slug));
 
 // Definisikan item navigasi utama sebagai computed property
 const mainNavItems = computed<NavItem[]>(() => {
@@ -111,26 +144,53 @@ const footerNavItems: NavItem[] = [
 </script>
 
 <template>
-    <Sidebar collapsible="icon" variant="inset">
-        <SidebarHeader>
+    <Sidebar
+        collapsible="icon"
+        variant="inset"
+        class="h-screen shadow-lg border-r border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-900"
+    >
+    <SidebarHeader class="py-4 px-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-center bg-white dark:bg-gray-900">
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
                         <Link :href="tenantSlug ? route('tenant.dashboard', { tenantSlug: tenantSlug }) : route('dashboard.default')">
-                            <AppLogo />
+                            <AppLogo class="w-10 h-10" />
                         </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent>
+        <SidebarContent class="flex-1 px-2 py-4 overflow-y-auto">
             <NavMain :items="mainNavItems" />
         </SidebarContent>
 
-        <SidebarFooter>
-            <NavFooter :items="footerNavItems" />
-            <NavUser />
+        <SidebarFooter
+            class="px-4 py-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+        >
+            <div
+                class="p-3 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs text-gray-700 dark:text-gray-200"
+            >
+                <h4 class="font-semibold text-sm mb-2 text-gray-800 dark:text-gray-100">Status Langganan</h4>
+                <div class="flex flex-col gap-1">
+                    <span>
+                        <span class="font-medium">Jenis Paket:</span>
+                        <span class="text-blue-600 dark:text-blue-400">&nbsp;{{ tenant?.plan_name || tenant?.pricing_plan_id || 'TRIAL' }}</span>
+                    </span>
+                    <span>
+                        <span class="font-medium">Status:</span>
+                        <span :class="tenant?.is_subscribed ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'">&nbsp;{{ tenant?.is_subscribed ? 'Aktif' : 'Tidak Aktif' }}</span>
+                    </span>
+                    <span>
+                        <span class="font-medium">Berlaku Hingga:</span>
+                        <span>&nbsp;{{ tenant?.subscription_ends_at || '-' }}</span>
+                    </span>
+                </div>
+            </div>
+            <div class="border-t pt-3 mt-2">
+                <NavFooter :items="footerNavItems" class="mb-2" />
+                <NavUser />
+            </div>
         </SidebarFooter>
     </Sidebar>
     <slot />

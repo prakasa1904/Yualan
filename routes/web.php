@@ -23,6 +23,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\SaasInvoiceController;
 use App\Http\Controllers\SaasInvoiceHistoryController;
+use App\Http\Controllers\TenantController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -158,6 +159,11 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/{tenantSlug}/dashboard', [DashboardController::class, 'index'])
         ->middleware(['tenant.access', 'check.subscription'])->name('tenant.dashboard');
+
+    // Lightweight JSON endpoint for fetching tenant info (used by sidebar via AJAX)
+    Route::get('/{tenantSlug}/tenant/info', [TenantController::class, 'info'])
+        ->middleware(['tenant.access'])
+        ->name('tenant.info');
 
     Route::resource('{tenantSlug}/categories', CategoryController::class)
         ->middleware(['tenant.access', 'check.subscription']);

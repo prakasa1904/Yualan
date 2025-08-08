@@ -111,6 +111,7 @@ class RegisteredUserController extends Controller
                 'country' => $request->country, // Perbaikan: gunakan $request->country
                 'business_type' => $request->business_type,
                 'is_active' => true, // Perusahaan baru langsung aktif
+                'pricing_plan_id' => 'TRIAL',
                 'subscription_ends_at' => $subscriptionEndsAt,
                 'is_subscribed' => true, // Trial, belum berlangganan
             ]);

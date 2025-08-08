@@ -1,14 +1,11 @@
 <script setup lang="ts">
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
-
 const appName = import.meta.env.VITE_APP_NAME;
 </script>
 
 <template>
-<!--    <div class="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">-->
-<!--        <AppLogoIcon class="size-5 fill-current text-white dark:text-black" />-->
-<!--    </div>-->
-    <div class="ml-1 grid flex-1 text-left text-sm">
-        <span class="mb-0.5 truncate leading-tight font-semibold">{{appName}}</span>
+    <div class="flex items-center justify-center w-full">
+        <div class="px-2 py-1 rounded-md bg-white dark:bg-gray-900 ring-1 ring-slate-200 dark:ring-slate-700 shadow-sm max-w-[180px] w-full mx-auto text-center">
+            <span :title="appName" class="block truncate select-none font-semibold text-sm text-gray-900 dark:text-gray-100">{{ appName }}</span>
+        </div>
     </div>
 </template>
