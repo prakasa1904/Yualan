@@ -89,7 +89,7 @@ const features = [
                 <template v-else>
                     <Link
                         :href="route('login')"
-                        class="px-4 py-2 rounded-md text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors duration-200"
+                        class="px-4 py-2 rounded-md text-sm font-medium bg-white text-blue-600 hover:text-blue-700 transition-colors duration-200"
                     >
                         Login
                     </Link>
