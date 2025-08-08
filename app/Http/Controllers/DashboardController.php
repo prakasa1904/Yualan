@@ -76,6 +76,7 @@ class DashboardController extends Controller
             'topSellingProducts' => $topSellingProducts,
             'currentDateTime' => Carbon::now()->locale('id')->isoFormat('D MMMM YYYY, HH:mm'),
             'subscriptionSuccess' => session('subscription_success'),
+            'error' => session('error'),
         ]);
     }
 }

@@ -1,3 +1,4 @@
+
 <?php
 
 use App\Http\Controllers\CategoryController;
@@ -20,6 +21,8 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\SaasInvoiceController;
+use App\Http\Controllers\SaasInvoiceHistoryController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -211,7 +214,11 @@ Route::middleware('auth')->group(function () {
             Route::patch('tenant-info', [TenantSettingsController::class, 'update'])->name('tenant.settings.update');
             Route::post('tenant-info/generate-code', [TenantSettingsController::class, 'generateInvitationCode'])->name('tenant.settings.generateInvitationCode');
         });
+        
+        Route::get('/invoices/history', [SaasInvoiceHistoryController::class, 'index'])->name('invoices.history');
     });
+
+    Route::get('/{tenantSlug}/invoice/{id}', [SaasInvoiceController::class, 'show'])->name('invoice.show');
 
     /**
      * END
@@ -225,6 +232,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/subscription/payment', [\App\Http\Controllers\SubscriptionController::class, 'payment'])->name('subscription.payment');
     Route::post('/subscription/subscribe', [\App\Http\Controllers\SubscriptionController::class, 'subscribe'])->name('subscription.subscribe');
     Route::get('/subscription/success', [\App\Http\Controllers\SubscriptionController::class, 'success'])->name('subscription.success');
+    Route::get('/subscription/invoice', [\App\Http\Controllers\SubscriptionController::class, 'invoice'])->name('subscription.invoice');
 });
 
 // Webhook notification route - must be outside auth and CSRF protection

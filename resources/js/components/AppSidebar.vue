@@ -52,6 +52,12 @@ const mainNavItems = computed<NavItem[]>(() => {
             href: route('sales.history', { tenantSlug: tenantSlug.value }),
             icon: History,
         });
+        // Tambahkan menu Riwayat Invoice SaaS
+        items.push({
+            title: 'Riwayat Invoice SaaS',
+            href: route('invoices.history', { tenantSlug: tenantSlug.value }),
+            icon: Tag,
+        });
         items.push({
             title: 'Master Data',
             children: [
@@ -93,12 +99,12 @@ const mainNavItems = computed<NavItem[]>(() => {
 const footerNavItems: NavItem[] = [
     {
         title: 'Github Repo',
-        href: 'https://github.com/laravel/vue-starter-kit',
+        href: 'https://github.com/Abdurozzaq/Yualan',
         icon: Folder,
     },
     {
         title: 'Documentation',
-        href: 'https://yualan.or.id',
+        href: 'https://yualan.web.id',
         icon: BookOpen,
     },
 ];

@@ -13,6 +13,13 @@ use App\Models\Payment;
 
 class SubscriptionController extends Controller
 {
+    public function invoice()
+    {
+        $appName = config('app.name', 'SaaS App');
+        return Inertia::render('Subscription/Invoice', [
+            'appName' => $appName
+        ]);
+    }
     protected $ipaymuService;
 
     public function __construct(IpaymuService $ipaymuService)
@@ -84,8 +91,8 @@ class SubscriptionController extends Controller
             return response()->json(['status' => 'ok']);
         }
 
-        // Use regex to handle potential hyphens in UUIDs
-        if (!preg_match('/^SUB-([a-f0-9\-]+)-([a-f0-9\-]+)-(\d+)$/', $referenceId, $matches)) {
+        // Use strict regex to match UUIDs for tenant and plan
+        if (!preg_match('/^SUB-([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})-([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})-(\d+)$/i', $referenceId, $matches)) {
             Log::error("Invalid referenceId format: {$referenceId}");
             return response()->json(['status' => 'error', 'message' => 'Invalid referenceId format'], 400);
         }
@@ -125,6 +132,15 @@ class SubscriptionController extends Controller
                 'description' => "Subscription to {$plan->plan_name}",
             ]);
 
+            // Insert to saas_invoices
+            \App\Models\SaasInvoice::create([
+                'tenant_id' => $tenant->id,
+                'plan_name' => $plan->plan_name,
+                'expired_at' => $subscription_ends_at,
+                'transaction_id' => $transactionId,
+                'amount' => $request->input('amount', $plan->price),
+            ]);
+
             Log::info("Subscription for tenant {$tenant->id} to plan {$plan->id} successfully processed.");
 
             return response()->json(['status' => 'ok']);
@@ -137,7 +153,22 @@ class SubscriptionController extends Controller
     public function success(Request $request)
     {
         if ($request->query('status') === 'berhasil') {
-            return redirect()->route('dashboard.default')->with('subscription_success', 'true');
+            // Ambil invoice terakhir milik tenant yang sedang login
+            $tenant = Auth::user()->tenant;
+            if ($tenant) {
+                $invoice = \App\Models\SaasInvoice::where('transaction_id', $tenant->last_transaction_id)
+                    ->orderByDesc('created_at')
+                    ->first();
+                if ($invoice) {
+                    // Pastikan route invoice.show menerima tenantSlug dan id
+                    return redirect()->route('invoice.show', [
+                        'id' => $invoice->id,
+                        'tenantSlug' => $tenant->slug,
+                    ]);
+                }
+            }
+            // fallback jika tidak ada invoice
+            return redirect()->route('subscription.invoice')->with('error', 'Invoice tidak ditemukan.');
         }
 
         return redirect()->route('subscription.payment')->with('error', 'Payment failed or was cancelled.');
