@@ -73,8 +73,9 @@ class DashboardController extends Controller
             'totalProducts' => $totalProducts,
             'totalCustomers' => $totalCustomers,
             'recentSales' => $recentSales,
-            'topSellingProducts' => $topSellingProducts, // Tambahkan ini
-            'currentDateTime' => Carbon::now()->locale('id')->isoFormat('D MMMM YYYY, HH:mm'), // Format tanggal dan waktu Indonesia
+            'topSellingProducts' => $topSellingProducts,
+            'currentDateTime' => Carbon::now()->locale('id')->isoFormat('D MMMM YYYY, HH:mm'),
+            'subscriptionSuccess' => session('subscription_success'),
         ]);
     }
 }

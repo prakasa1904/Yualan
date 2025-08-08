@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\SaasSetting;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -16,9 +17,19 @@ class IpaymuService
 
     public function __construct(Tenant $tenant)
     {
-        $this->apiKey = $tenant->ipaymu_api_key; // Mengambil VA Number dari tenant
-        $this->secretKey = $tenant->ipaymu_secret_key; // Mengambil Secret Key dari tenant
         $this->mode = $tenant->ipaymu_mode ?: 'sandbox'; // Default ke sandbox
+
+        // Coba dapatkan kredensial dari tenant dulu
+        $this->apiKey = $tenant->ipaymu_api_key;
+        $this->secretKey = $tenant->ipaymu_secret_key;
+
+        // Jika tidak ada di tenant, ambil dari SaasSetting sebagai fallback
+        if (empty($this->apiKey)) {
+            $this->apiKey = SaasSetting::where('key', 'ipaymu_va')->value('value');
+        }
+        if (empty($this->secretKey)) {
+            $this->secretKey = SaasSetting::where('key', 'ipaymu_api_key')->value('value');
+        }
 
         $this->baseUrl = ($this->mode === 'production')
             ? 'https://api.ipaymu.com/v2'
@@ -140,6 +151,38 @@ class IpaymuService
         ];
 
         return $this->callApi('post', '/payment', $body);
+    }
+
+    /**
+     * Create a subscription payment.
+     *
+     * @param Tenant $tenant
+     * @param \App\Models\PricingPlan $plan
+     * @param array $product
+     * @param array $qty
+     * @param array $price
+     * @param array $description
+     * @return array
+     * @throws \Exception
+     */
+    public function createSubscriptionPayment(Tenant $tenant, \App\Models\PricingPlan $plan, array $product, array $qty, array $price, array $description): array
+    {
+        $body = [
+            'name' => $plan->plan_name,
+            'product' => $product,
+            'qty' => $qty,
+            'price' => $price,
+            'description' => $description,
+                        'returnUrl' => route('subscription.success'), // Redirect on success
+            'notifyUrl' => route('subscription.notify'),
+            'cancelUrl' => route('subscription.payment'),
+                        'referenceId' => 'SUB-' . $tenant->id . '-' . $plan->id . '-' . time(), // Include plan_id
+            'buyerName' => $tenant->owner->name ?? $tenant->name,
+            'buyerEmail' => $tenant->owner->email,
+            'buyerPhone' => $tenant->phone, 
+        ];
+
+        return $this->callApi('post', '/payment', $body); // Menggunakan endpoint yang sama dengan initiatePayment untuk saat ini
     }
 
     /**

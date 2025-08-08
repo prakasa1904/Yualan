@@ -48,6 +48,10 @@ class Tenant extends Model
         'ipaymu_api_key',
         'ipaymu_secret_key',
         'ipaymu_mode',
+        'pricing_plan_id',
+        'subscription_ends_at',
+        'last_transaction_id',
+        'is_subscribed',
     ];
 
     /**
@@ -60,6 +64,8 @@ class Tenant extends Model
         return [
             'id' => 'string', // Pastikan ID di-cast sebagai string
             'is_active' => 'boolean',
+            'is_subscribed' => 'boolean',
+            'subscription_ends_at' => 'datetime',
         ];
     }
 
@@ -74,6 +80,14 @@ class Tenant extends Model
                 $model->{$model->getKeyName()} = (string) Str::uuid();
             }
         });
+    }
+
+    /**
+     * Get the pricing plan for the Tenant.
+     */
+    public function pricingPlan()
+    {
+        return $this->belongsTo(PricingPlan::class);
     }
 
     /**
@@ -114,6 +128,15 @@ class Tenant extends Model
     public function suppliers(): HasMany
     {
         return $this->hasMany(Supplier::class);
+    }
+
+    /**
+     * Get the owner of the Tenant.
+     */
+    public function owner()
+    {
+        // Assuming the owner is the user with the 'admin' role for this tenant.
+        return $this->hasOne(User::class)->where('role', 'admin');
     }
 }
 

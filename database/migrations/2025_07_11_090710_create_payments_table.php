@@ -13,19 +13,16 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('tenant_id');
-            $table->uuid('sale_id'); // Foreign key to sales table
-            $table->string('payment_method'); // e.g., cash, card, iPaymu
-            $table->decimal('amount', 12, 2);
+            $table->foreignUuid('tenant_id')->constrained()->cascadeOnDelete();
+            $table->foreignUuid('sale_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->string('payment_method');
+            $table->decimal('amount', 15, 2);
             $table->string('currency')->default('IDR');
-            $table->string('status')->default('pending')->comment('pending, completed, failed, refunded');
-            $table->string('transaction_id')->nullable()->unique(); // Transaction ID from payment gateway (e.g., iPaymu)
-            $table->jsonb('gateway_response')->nullable(); // Store raw response from iPaymu for debugging/details
+            $table->string('status')->default('pending');
+            $table->string('transaction_id')->unique()->nullable();
+            $table->jsonb('gateway_response')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
-
-            $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('cascade');
-            $table->foreign('sale_id')->references('id')->on('sales')->onDelete('cascade');
         });
     }
 

@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant.access' => CheckTenantAccess::class,
             'superadmin.access' => CheckSuperadmin::class,
             'admin.access' => CheckAdmin::class,
+            'check.subscription' => \App\Http\Middleware\CheckSubscription::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [

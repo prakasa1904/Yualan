@@ -25,6 +25,21 @@ const mainNavItems = computed<NavItem[]>(() => {
         },
     ];
 
+    // Jika superadmin (tanpa tenantSlug), tambahkan menu Superadmin
+    if (!tenantSlug.value && userRole.value === 'superadmin') {
+        items.push({
+            title: 'Pricing Plans',
+            href: route('superadmin.pricing.index'),
+            icon: Tag,
+        });
+        items.push({
+            title: 'SaaS Settings',
+            href: route('superadmin.settings.index'),
+            icon: Tag,
+        });
+        
+    }
+
     // Hanya tambahkan tautan jika tenantSlug tersedia dan user bukan superadmin
     if (tenantSlug.value && userRole.value !== 'superadmin') {
         items.push({

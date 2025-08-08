@@ -2,11 +2,19 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, usePage, Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Package, Users, ReceiptText, Zap, Award, ShoppingCart, Tag, Image as ImageIcon } from 'lucide-vue-next';
+import { DollarSign, Package, Users, ReceiptText, Zap, Award, ShoppingCart, Tag, Image as ImageIcon, CheckCircle } from 'lucide-vue-next';
 import { formatCurrency } from '@/utils/formatters';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog';
 
 // Define props to receive data from the controller
 interface Sale {
@@ -33,6 +41,7 @@ const props = defineProps<{
     recentSales: Sale[];
     topSellingProducts: TopProduct[]; // New prop for top selling products
     currentDateTime: string; // Formatted date-time string from backend
+    subscriptionSuccess?: string;
 }>();
 
 // Inertia page props
@@ -62,12 +71,51 @@ const formatTime = (dateTimeString: string) => {
         minute: '2-digit',
     });
 };
+
+const showSuccessModal = ref(false);
+
+const closeSuccessModal = () => {
+    showSuccessModal.value = false;
+    // Optional: Clear the session flash message from history state
+    window.history.replaceState({}, document.title, window.location.pathname);
+};
+
+onMounted(() => {
+    if (props.subscriptionSuccess === 'true') {
+        showSuccessModal.value = true;
+    }
+});
+
+// Watch for changes in the prop, in case of navigation within the same component
+watch(() => props.subscriptionSuccess, (newValue) => {
+    if (newValue === 'true') {
+        showSuccessModal.value = true;
+    }
+});
 </script>
 
 <template>
     <Head :title="tenantName ? `Dashboard - ${tenantName}` : 'Dashboard'" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
+        <!-- Subscription Success Modal -->
+        <Dialog :open="showSuccessModal" @update:open="closeSuccessModal">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader class="items-center text-center">
+                    <CheckCircle class="w-16 h-16 text-green-500 mb-4" />
+                    <DialogTitle class="text-2xl font-bold">Pembayaran Berhasil!</DialogTitle>
+                    <DialogDescription>
+                        Langganan Anda telah berhasil diaktifkan. Selamat menikmati semua fitur premium.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter class="sm:justify-center">
+                    <Button type="button" @click="closeSuccessModal">
+                        Tutup
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
             <!-- Header with Welcome Message -->
             <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">

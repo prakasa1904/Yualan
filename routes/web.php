@@ -11,6 +11,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SuperadminDashboardController;
+use App\Http\Controllers\Superadmin\PricingPlanController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -124,6 +125,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/superadmin/dashboard', [SuperadminDashboardController::class, 'index'])
         ->middleware(['superadmin.access'])->name('superadmin.dashboard');
 
+    // Superadmin Pricing Plans CRUD
+    Route::middleware(['superadmin.access'])->prefix('superadmin')->name('superadmin.')->group(function () {
+        Route::get('pricing', [PricingPlanController::class, 'index'])->name('pricing.index');
+        Route::post('pricing', [PricingPlanController::class, 'store'])->name('pricing.store');
+        Route::put('pricing/{pricing}', [PricingPlanController::class, 'update'])->name('pricing.update');
+        Route::delete('pricing/{pricing}', [PricingPlanController::class, 'destroy'])->name('pricing.destroy');
+
+        Route::get('settings', [\App\Http\Controllers\Superadmin\SaasSettingsController::class, 'index'])->name('settings.index');
+        Route::post('settings', [\App\Http\Controllers\Superadmin\SaasSettingsController::class, 'store'])->name('settings.store');
+    });
+
 
     /**
      * END
@@ -142,25 +154,25 @@ Route::middleware('auth')->group(function () {
     })->name('tenant.unassigned');
 
     Route::get('/{tenantSlug}/dashboard', [DashboardController::class, 'index'])
-        ->middleware('tenant.access')->name('tenant.dashboard');
+        ->middleware(['tenant.access', 'check.subscription'])->name('tenant.dashboard');
 
     Route::resource('{tenantSlug}/categories', CategoryController::class)
-        ->middleware('tenant.access');
+        ->middleware(['tenant.access', 'check.subscription']);
 
     Route::resource('{tenantSlug}/products', ProductController::class)
-        ->middleware('tenant.access');
+        ->middleware(['tenant.access', 'check.subscription']);
 
     // Master Customers routes, tenant-scoped
     Route::resource('{tenantSlug}/customers', CustomerController::class)
-        ->middleware('tenant.access'); // Apply tenant access middleware
+        ->middleware(['tenant.access', 'check.subscription']); // Apply tenant access middleware
 
     // Route for exporting customer ID card
     Route::get('{tenantSlug}/customers/{customer}/id-card', [CustomerController::class, 'exportIdCard'])
         ->name('customers.idCard')
-        ->middleware('tenant.access');
+        ->middleware(['tenant.access', 'check.subscription']);
 
     // Rute untuk Sales/Pemesanan dan Riwayat
-    Route::prefix('{tenantSlug}')->middleware('tenant.access')->group(function () {
+    Route::prefix('{tenantSlug}')->middleware(['tenant.access', 'check.subscription'])->group(function () {
         Route::get('sales/order', [SaleController::class, 'order'])->name('sales.order');
         Route::post('sales/store', [SaleController::class, 'store'])->name('sales.store');
         Route::get('sales/receipt/{sale}', [SaleController::class, 'receipt'])->name('sales.receipt');
@@ -206,6 +218,17 @@ Route::middleware('auth')->group(function () {
      * ############### USER AREA ###############
      */
 });
+
+// Subscription routes
+Route::middleware('auth')->group(function () {
+    Route::get('/subscription/info', [\App\Http\Controllers\SubscriptionController::class, 'info'])->name('subscription.info');
+    Route::get('/subscription/payment', [\App\Http\Controllers\SubscriptionController::class, 'payment'])->name('subscription.payment');
+    Route::post('/subscription/subscribe', [\App\Http\Controllers\SubscriptionController::class, 'subscribe'])->name('subscription.subscribe');
+    Route::get('/subscription/success', [\App\Http\Controllers\SubscriptionController::class, 'success'])->name('subscription.success');
+});
+
+// Webhook notification route - must be outside auth and CSRF protection
+Route::post('/subscription/notify', [\App\Http\Controllers\SubscriptionController::class, 'notify'])->name('subscription.notify');
 
 // Rute notify iPaymu (webhook) - DIPINDAHKAN KELUAR DARI GRUP tenantSlug
 // Ini harus dapat diakses secara global oleh iPaymu
