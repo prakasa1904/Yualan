@@ -26,9 +26,22 @@ use App\Http\Controllers\SaasInvoiceHistoryController;
 use App\Http\Controllers\TenantController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Models\PricingPlan;
+use App\Models\SaasSetting;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome');
+    $plans = PricingPlan::query()
+        ->select(['id', 'plan_name', 'plan_description', 'period_type', 'price', 'discount_percentage'])
+        ->orderBy('period_type')
+        ->orderBy('price')
+        ->get();
+
+    $trialDays = (int) SaasSetting::get('trial_days', 0);
+
+    return Inertia::render('Welcome', [
+        'pricingPlans' => $plans,
+        'trialDays' => $trialDays,
+    ]);
 })->name('home');
 
 Route::middleware('guest')->group(function () {
