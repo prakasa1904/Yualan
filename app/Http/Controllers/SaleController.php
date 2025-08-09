@@ -298,6 +298,21 @@ class SaleController extends Controller
                 ->with('error', 'Terjadi kesalahan saat menghubungi iPaymu: ' . $err);
         } else {
             $ret = json_decode($response);
+            
+            // Add error handling for JSON decode
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Log::error('iPaymu JSON Decode Error: ' . json_last_error_msg() . ' | Response: ' . $response);
+                return redirect()->route('sales.order', ['tenantSlug' => $tenant->slug])
+                    ->with('error', 'Terjadi kesalahan saat memproses respons iPaymu.');
+            }
+            
+            // Add null check and property existence check
+            if (!$ret || !isset($ret->Status)) {
+                Log::error('iPaymu Invalid Response: ' . $response);
+                return redirect()->route('sales.order', ['tenantSlug' => $tenant->slug])
+                    ->with('error', 'Respons iPaymu tidak valid.');
+            }
+            
             if ($ret->Status == 200) {
                 // Update sale status to 'pending' or 'waiting_payment'
                 $sale->update(['status' => 'pending', 'notes' => 'Menunggu pembayaran via iPaymu.']);
@@ -328,7 +343,7 @@ class SaleController extends Controller
             } else {
                 Log::error('iPaymu API Error: ' . json_encode($ret));
                 return redirect()->route('sales.order', ['tenantSlug' => $tenant->slug])
-                    ->with('error', 'Pembayaran iPaymu gagal diinisiasi: ' . ($ret->Message ?? 'Terjadi kesalahan.'));
+                    ->with('error', 'Pembayaran iPaymu gagal diinisiasi: ' . (isset($ret->Message) ? $ret->Message : 'Terjadi kesalahan.'));
             }
         }
     }
