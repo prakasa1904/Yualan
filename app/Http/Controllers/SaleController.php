@@ -225,108 +225,51 @@ class SaleController extends Controller
      */
     protected function initiateIpaymuPayment(Sale $sale, Tenant $tenant): Response|RedirectResponse
     {
-        // Retrieve VA and Secret Key from the tenant model
-        $va = $tenant->ipaymu_api_key; // Assuming ipaymu_api_key stores VA
-        $secret = $tenant->ipaymu_secret_key; // Assuming ipaymu_secret_key stores Secret Key
-        $url = env('IPAYMU_URL'); // iPaymu URL still from .env (sandbox/production)
+        try {
+            $ipaymuService = new IpaymuService($tenant);
 
-        if (!$va || !$secret || !$url) {
-            Log::error('iPaymu credentials are not configured for tenant: ' . $tenant->name . ' (ID: ' . $tenant->id . ')');
-            return redirect()->route('sales.order', ['tenantSlug' => $tenant->slug])
-                ->with('error', 'Konfigurasi iPaymu belum lengkap untuk tenant ini. Silakan hubungi administrator.');
-        }
-
-        $products = [];
-        $qtys = [];
-        $prices = [];
-
-        foreach ($sale->saleItems as $item) { // Use saleItems relationship
-            $products[] = $item->product->name;
-            $qtys[] = $item->quantity;
-            $prices[] = $item->price;
-        }
-
-        $buyerName = $sale->customer ? $sale->customer->name : 'Guest Customer';
-        $buyerEmail = $sale->customer ? $sale->customer->email : 'guest@example.com'; // Provide a default email if customer is null
-        $buyerPhone = $sale->customer ? $sale->customer->phone : '081234567890'; // Provide a default phone if customer is null
-
-        $body = [
-            'product' => $products,
-            'qty' => $qtys,
-            'price' => $prices,
-            'returnUrl' => route('sales.ipaymuReturn', ['tenantSlug' => $tenant->slug, 'sale' => $sale->id]), // Corrected route name
-            'cancelUrl' => route('sales.ipaymuCancel', ['tenantSlug' => $tenant->slug, 'sale' => $sale->id]), // Corrected route name
-            'notifyUrl' => route('sales.ipaymuNotify'), // Corrected to use route helper without tenantSlug
-            'buyerName' => $buyerName,
-            'buyerEmail' => $buyerEmail,
-            'buyerPhone' => $buyerPhone,
-            'referenceId' => $sale->id, // Use sale ID as referenceId
-            'expired' => 2, // Payment duration in hours
-        ];
-
-        $method = 'POST';
-        $jsonBody = json_encode($body, JSON_UNESCAPED_SLASHES);
-        $requestBody = strtolower(hash('sha256', $jsonBody));
-        $stringToSign = strtoupper($method) . ':' . $va . ':' . $requestBody . ':' . $secret;
-        $signature = hash_hmac('sha256', $stringToSign, $secret);
-        $timestamp = date('YmdHis');
-
-        $ch = curl_init($url);
-        $headers = [
-            'Accept: application/json',
-            'Content-Type: application/json',
-            'va: ' . $va,
-            'signature: ' . $signature,
-            'timestamp: ' . $timestamp,
-        ];
-
-        curl_setopt($ch, CURLOPT_HEADER, false);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_POST, true); // Use true for POST requests
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonBody);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // For sandbox/testing, set to true in production
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // For sandbox/testing, set to 2 in production
-
-        $response = curl_exec($ch);
-        $err = curl_error($ch);
-        curl_close($ch);
-
-        if ($err) {
-            Log::error('iPaymu cURL Error: ' . $err);
-            return redirect()->route('sales.order', ['tenantSlug' => $tenant->slug])
-                ->with('error', 'Terjadi kesalahan saat menghubungi iPaymu: ' . $err);
-        } else {
-            $ret = json_decode($response);
-            
-            // Add error handling for JSON decode
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                Log::error('iPaymu JSON Decode Error: ' . json_last_error_msg() . ' | Response: ' . $response);
-                return redirect()->route('sales.order', ['tenantSlug' => $tenant->slug])
-                    ->with('error', 'Terjadi kesalahan saat memproses respons iPaymu.');
+            // Prepare items data for IpaymuService
+            $items = [];
+            foreach ($sale->saleItems as $item) {
+                $items[] = [
+                    'name' => $item->product->name,
+                    'qty' => $item->quantity,
+                    'price' => $item->price,
+                ];
             }
-            
-            // Add null check and property existence check
-            if (!$ret || !isset($ret->Status)) {
-                Log::error('iPaymu Invalid Response: ' . $response);
-                return redirect()->route('sales.order', ['tenantSlug' => $tenant->slug])
-                    ->with('error', 'Respons iPaymu tidak valid.');
-            }
-            
-            if ($ret->Status == 200) {
-                // Update sale status to 'pending' or 'waiting_payment'
+
+            $buyerName = $sale->customer ? $sale->customer->name : 'Guest Customer';
+            $buyerEmail = $sale->customer ? $sale->customer->email : 'guest@example.com';
+            $buyerPhone = $sale->customer ? $sale->customer->phone : '081234567890';
+
+            // Use IpaymuService to initiate payment
+            $response = $ipaymuService->initiatePayment(
+                $items,
+                $sale->id, // referenceId
+                $buyerName,
+                $buyerEmail,
+                $buyerPhone,
+                route('sales.ipaymuReturn', ['tenantSlug' => $tenant->slug, 'sale' => $sale->id]),
+                route('sales.ipaymuCancel', ['tenantSlug' => $tenant->slug, 'sale' => $sale->id]),
+                route('sales.ipaymuNotify')
+                // Omit pickup area and address to avoid "Pickup area not registered" error
+            );
+
+            if ($response['Status'] == 200) {
+                // Update sale status to 'pending'
                 $sale->update(['status' => 'pending', 'notes' => 'Menunggu pembayaran via iPaymu.']);
+                
                 // Create a payment record
                 Payment::create([
-                    'id' => Str::uuid(), // Generate UUID for Payment
+                    'id' => Str::uuid(),
                     'tenant_id' => $tenant->id,
                     'sale_id' => $sale->id,
                     'payment_method' => 'ipaymu',
                     'amount' => $sale->total_amount,
                     'currency' => 'IDR',
                     'status' => 'pending',
-                    'transaction_id' => $ret->Data->TransactionId ?? null,
-                    'gateway_response' => $ret,
+                    'transaction_id' => $response['Data']['TransactionId'] ?? null,
+                    'gateway_response' => $response,
                     'notes' => 'Pembayaran iPaymu diinisiasi',
                 ]);
 
@@ -338,13 +281,17 @@ class SaleController extends Controller
                     'tenantSlug' => $tenant->slug,
                     'tenantName' => $tenant->name,
                     'ipaymuConfigured' => (bool)$tenant->ipaymu_api_key && (bool)$tenant->ipaymu_secret_key,
-                    'ipaymuRedirectUrl' => $ret->Data->Url, // Pass the iPaymu URL to the frontend
+                    'ipaymuRedirectUrl' => $response['Data']['Url'], // Pass the iPaymu URL to the frontend
                 ]);
             } else {
-                Log::error('iPaymu API Error: ' . json_encode($ret));
+                Log::error('iPaymu API Error: ' . json_encode($response));
                 return redirect()->route('sales.order', ['tenantSlug' => $tenant->slug])
-                    ->with('error', 'Pembayaran iPaymu gagal diinisiasi: ' . (isset($ret->Message) ? $ret->Message : 'Terjadi kesalahan.'));
+                    ->with('error', 'Pembayaran iPaymu gagal diinisiasi: ' . (isset($response['Message']) ? $response['Message'] : 'Terjadi kesalahan.'));
             }
+        } catch (\Exception $e) {
+            Log::error('iPaymu Service Error: ' . $e->getMessage());
+            return redirect()->route('sales.order', ['tenantSlug' => $tenant->slug])
+                ->with('error', 'Terjadi kesalahan saat menginisiasi pembayaran iPaymu: ' . $e->getMessage());
         }
     }
 

@@ -127,6 +127,8 @@ class IpaymuService
      * @param string $returnUrl URL to redirect after successful payment
      * @param string $cancelUrl URL to redirect if payment is cancelled
      * @param string $notifyUrl URL for iPaymu to send payment notifications (IPN)
+     * @param string|null $pickupArea Optional pickup area (if null, will be omitted)
+     * @param string|null $pickupAddress Optional pickup address (if null, will be omitted)
      */
     public function initiatePayment(
         array $items,
@@ -136,7 +138,9 @@ class IpaymuService
         string $customerPhone,
         string $returnUrl,
         string $cancelUrl,
-        string $notifyUrl
+        string $notifyUrl,
+        string $pickupArea = null,
+        string $pickupAddress = null
     ): array {
         $productNames = array_column($items, 'name');
         $qtys = array_column($items, 'qty');
@@ -153,10 +157,16 @@ class IpaymuService
             'buyerName' => $customerName,
             'buyerEmail' => $customerEmail,
             'buyerPhone' => $customerPhone,
-            'pickupArea' => 'Offline Store', // Contoh, sesuaikan jika perlu
-            'pickupAddress' => 'Main Branch', // Contoh, sesuaikan jika perlu
             'comments' => 'Pembayaran pesanan POS',
         ];
+
+        // Only add pickup fields if they are provided and not empty
+        if (!empty($pickupArea)) {
+            $body['pickupArea'] = $pickupArea;
+        }
+        if (!empty($pickupAddress)) {
+            $body['pickupAddress'] = $pickupAddress;
+        }
 
         return $this->callApi('post', '/payment', $body);
     }
