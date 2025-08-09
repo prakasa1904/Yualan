@@ -44,6 +44,19 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
+// Informational pages (FAQ, Terms, Refund)
+Route::get('faq', function () {
+    return Inertia::render('Faq');
+})->name('faq');
+
+Route::get('terms', function () {
+    return Inertia::render('Terms');
+})->name('terms');
+
+Route::get('refund', function () {
+    return Inertia::render('Refund');
+})->name('refund');
+
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');

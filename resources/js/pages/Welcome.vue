@@ -167,10 +167,12 @@ const features = [
         <footer class="py-8 text-center bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <p>&copy; {{ new Date().getFullYear() }} {{ appName }}. All rights reserved.</p>
-                <div class="mt-4 flex justify-center space-x-4">
-                    <Link :href="route('login')" class="hover:underline">Login</Link>
-                    <Link :href="route('register')" class="hover:underline">Daftar</Link>
-                    <!-- Tambahkan tautan lain seperti Kebijakan Privasi, Syarat & Ketentuan jika ada -->
+                <div class="mt-4 flex flex-wrap justify-center gap-4">
+                    <Link :href="route('login')" class="px-4 py-1 rounded-full bg-white text-blue-600 hover:bg-blue-50 shadow-sm font-medium transition">Login</Link>
+                    <Link :href="route('register')" class="px-4 py-1 rounded-full bg-blue-600 text-white hover:bg-blue-700 shadow-sm font-medium transition">Daftar</Link>
+                    <Link :href="route('terms')" class="px-4 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 shadow-sm font-medium transition">Syarat & Ketentuan</Link>
+                    <Link :href="route('refund')" class="px-4 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 shadow-sm font-medium transition">Kebijakan Refund</Link>
+                    <Link :href="route('faq')" class="px-4 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 shadow-sm font-medium transition">FAQ</Link>
                 </div>
             </div>
         </footer>
