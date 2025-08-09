@@ -101,7 +101,6 @@ const features = [
                     </Link>
                     <Link
                         :href="route('register')"
-                        target="_blank"
                         class="px-4 py-2 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200 shadow-md"
                     >
                         Daftar
@@ -127,13 +126,14 @@ const features = [
                     >
                         Mulai Sekarang
                     </Link>
-                    <Link
+                    <a
                         :href="userDocsUrl"
                         target="_blank"
-                        class="w-full sm:w-auto px-10 py-4 rounded-full text-xl font-bold bg-transparent border-2 border-white text-white hover:bg-white hover:text-indigo-700 transition-all duration-300 shadow-xl transform hover:scale-105"
+                        rel="noopener noreferrer"
+                        class="w-full sm:w-auto px-10 py-4 rounded-full text-xl font-bold bg-transparent border-2 border-white text-white hover:bg-white hover:text-indigo-700 transition-all duration-300 shadow-xl transform hover:scale-105 inline-block text-center no-underline"
                     >
                         User Documentation
-                    </Link>
+                    </a>
                 
                 </div>
             </div>
