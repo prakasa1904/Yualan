@@ -15,6 +15,9 @@ const trialDays = computed<number>(() => Number((page.props as any).trialDays ||
 // dan di-expose melalui vite.config.js jika diperlukan.
 const appName = import.meta.env.VITE_APP_NAME || 'Yualan POS'; // Fallback jika tidak terdefinisi
 
+// Mengambil URL dokumentasi pengguna dari variabel lingkungan
+const userDocsUrl = import.meta.env.VITE_USERDOCS || '#';
+
 // Computed property untuk menentukan URL dashboard yang benar
 const dashboardLink = computed(() => {
     if (user.value) {
@@ -124,7 +127,7 @@ const features = [
                         Mulai Sekarang
                     </Link>
                     <Link
-                        :href="import.meta.env.VITE_USERDOCS"
+                        :href="userDocsUrl"
                         class="w-full sm:w-auto px-10 py-4 rounded-full text-xl font-bold bg-transparent border-2 border-white text-white hover:bg-white hover:text-indigo-700 transition-all duration-300 shadow-xl transform hover:scale-105"
                     >
                         User Documentation
