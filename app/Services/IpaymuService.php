@@ -17,23 +17,31 @@ class IpaymuService
 
     public function __construct(Tenant $tenant)
     {
-        $this->mode = $tenant->ipaymu_mode ?: 'sandbox'; // Default ke sandbox
+        $this->mode = $tenant->ipaymu_mode ?: 'production'; // Default ke production
 
         // Coba dapatkan kredensial dari tenant dulu
         $this->apiKey = $tenant->ipaymu_api_key;
         $this->secretKey = $tenant->ipaymu_secret_key;
 
+        $ambilDariSaas = false;
         // Jika tidak ada di tenant, ambil dari SaasSetting sebagai fallback
         if (empty($this->apiKey)) {
             $this->apiKey = SaasSetting::where('key', 'ipaymu_va')->value('value');
+            $ambilDariSaas = true;
         }
         if (empty($this->secretKey)) {
             $this->secretKey = SaasSetting::where('key', 'ipaymu_api_key')->value('value');
+            $ambilDariSaas = true;
         }
 
-        $this->baseUrl = ($this->mode === 'production')
-            ? 'https://api.ipaymu.com/v2'
-            : 'https://sandbox.ipaymu.com/api/v2';
+        if ($ambilDariSaas) {
+            // Ambil baseUrl dari env jika ambil dari SaasSetting
+            $this->baseUrl = env('IPAYMU_URL', 'https://my.ipaymu.com/api/v2');
+        } else {
+            $this->baseUrl = ($this->mode === 'production')
+                ? 'https://my.ipaymu.com/api/v2'
+                : 'https://sandbox.ipaymu.com/api/v2';
+        }
 
         if (empty($this->apiKey) || empty($this->secretKey)) {
             throw new \Exception("iPaymu API Key atau Secret Key tidak dikonfigurasi untuk tenant: {$tenant->name} ({$tenant->slug})");

@@ -14,6 +14,7 @@ interface TenantData {
     name: string;
     ipaymu_api_key: string | null;
     ipaymu_secret_key: string | null;
+    ipaymu_mode: string | null; // Tambah ipaymu_mode
     invitation_code: string | null; // Add invitation_code to the interface
 }
 
@@ -37,6 +38,7 @@ const form = useForm({
     name: props.tenant.name,
     ipaymu_api_key: props.tenant.ipaymu_api_key || '',
     ipaymu_secret_key: props.tenant.ipaymu_secret_key || '',
+    ipaymu_mode: props.tenant.ipaymu_mode || 'production', // Default ke production
     invitation_code: props.tenant.invitation_code || '', // Initialize with existing code
 });
 
@@ -96,6 +98,21 @@ const generateNewCode = () => {
                             placeholder="Nama Bisnis Anda"
                         />
                         <InputError class="mt-2" :message="form.errors.name" />
+                    </div>
+
+
+                    <!-- Dropdown iPaymu Mode -->
+                    <div class="grid gap-2">
+                        <Label for="ipaymu_mode">iPaymu Mode</Label>
+                        <select
+                            id="ipaymu_mode"
+                            class="mt-1 block w-full border rounded px-3 py-2 focus:outline-none focus:ring"
+                            v-model="form.ipaymu_mode"
+                        >
+                            <option value="production">Production</option>
+                            <option value="sandbox">Sandbox</option>
+                        </select>
+                        <InputError class="mt-2" :message="form.errors.ipaymu_mode" />
                     </div>
 
                     <div class="grid gap-2">

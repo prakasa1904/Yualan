@@ -30,6 +30,7 @@ class TenantSettingsController extends Controller
                 'name' => $tenant->name,
                 'ipaymu_api_key' => $tenant->ipaymu_api_key,
                 'ipaymu_secret_key' => $tenant->ipaymu_secret_key,
+                'ipaymu_mode' => $tenant->ipaymu_mode,
                 'invitation_code' => $tenant->invitation_code, // Pass the invitation code
             ],
             'tenantSlug' => $tenantSlug,
@@ -52,6 +53,7 @@ class TenantSettingsController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'ipaymu_api_key' => ['nullable', 'string', 'max:255'],
             'ipaymu_secret_key' => ['nullable', 'string', 'max:255'],
+            'ipaymu_mode' => ['required', Rule::in(['production', 'sandbox'])],
             // Validate uniqueness of invitation_code, ignoring the current tenant's ID
             'invitation_code' => ['nullable', 'string', 'max:255', Rule::unique('tenants')->ignore($tenant->id)],
         ]);
@@ -60,6 +62,7 @@ class TenantSettingsController extends Controller
             'name' => $request->name,
             'ipaymu_api_key' => $request->ipaymu_api_key,
             'ipaymu_secret_key' => $request->ipaymu_secret_key,
+            'ipaymu_mode' => $request->ipaymu_mode,
             'invitation_code' => $request->invitation_code, // Update the invitation code
         ]);
 
