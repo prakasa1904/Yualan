@@ -100,4 +100,56 @@ Lihat file `LICENSE` untuk informasi lebih lanjut.
 Mulailah perjalanan digitalisasi bisnis Anda bersama Yualan.  
 Solusi POS open-source yang ringan, fleksibel, dan siap berkembang bersama komunitas.
 
+---
+
+## 📚 Dokumentasi Lengkap
+
+Dokumentasi komprehensif tersedia di folder `/docs`:
+
+- **[📖 Overview & Setup](docs/README.md)** - Pengenalan dan arsitektur project
+- **[🚀 Installation Guide](docs/installation.md)** - Panduan instalasi step-by-step  
+- **[👨‍💻 Development Guide](docs/development-guide.md)** - Panduan pengembangan dan kontribusi
+- **[🗄️ Database Schema](docs/database-schema.md)** - Struktur database lengkap
+- **[🔌 API Documentation](docs/api-documentation.md)** - Dokumentasi REST API
+- **[☁️ Deployment Guide](docs/deployment.md)** - Panduan deployment production
+- **[⚙️ Server Requirements](docs/server-requirement.md)** - Spesifikasi server dan konfigurasi
+- **[⏰ Scheduler Guide](docs/scheduler.md)** - Automated tasks dan cron jobs
+- **[🔧 Troubleshooting](docs/troubleshooting.md)** - Penyelesaian masalah umum
+- **[🤝 Contributing Guide](docs/contributing.md)** - Cara berkontribusi ke project
+
+## 🚀 Quick Start
+
+```bash
+# Clone repository
+git clone https://github.com/Abdurozzaq/Yualan.git
+cd Yualan
+
+# Install dependencies
+composer install
+npm install
+
+# Setup environment
+cp .env.example .env
+php artisan key:generate
+
+# Setup database
+php artisan migrate
+php artisan db:seed
+
+# Run development server
+npm run dev        # Terminal 1
+php artisan serve  # Terminal 2
+```
+
+Untuk instalasi lengkap, lihat [Installation Guide](docs/installation.md).
+
+## 🛠️ Tech Stack
+
+- **Backend**: Laravel 12.x, PHP 8.2+
+- **Frontend**: Vue 3, TypeScript, Inertia.js
+- **Styling**: Tailwind CSS, Radix Vue
+- **Database**: MySQL/PostgreSQL/SQLite
+- **Payment**: iPaymu Gateway Integration
+- **Tools**: Vite, Composer, NPM
+
 **Yualan POS – Yuk Jualan!**

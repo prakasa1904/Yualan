@@ -205,13 +205,121 @@ class IpaymuService
 
     /**
      * Check transaction status.
+     * Using JSON signature method like payment and history APIs.
      */
     public function checkTransaction(string $transactionId): array
     {
+        // Use JSON signature method (same as payment and history API)
         $body = [
             'transactionId' => $transactionId,
+            'account' => $this->apiKey, // VA Number as account
         ];
+
+        // Use callApi method which uses JSON signature
         return $this->callApi('post', '/transaction', $body);
+    }
+
+    /**
+     * Generate signature for form data requests.
+     * Different from JSON signature generation.
+     */
+    protected function generateSignatureForFormData(string $method, string $endpoint, array $formData): string
+    {
+        // For form data, we need to create query string and hash it
+        ksort($formData); // Sort by key
+        $queryString = http_build_query($formData);
+        $bodyHash = strtolower(hash('sha256', $queryString));
+
+        $stringToSign = strtoupper($method) . ':' . $this->apiKey . ':' . $bodyHash . ':' . $this->secretKey;
+        $signature = hash_hmac('sha256', $stringToSign, $this->secretKey);
+
+        Log::info('iPaymu Form Data Signature Debug', [
+            'method' => $method,
+            'endpoint' => $endpoint,
+            'formData' => $formData,
+            'queryString' => $queryString,
+            'bodyHash' => $bodyHash,
+            'stringToSign' => $stringToSign,
+            'generatedSignature' => $signature,
+            'vaUsed' => $this->apiKey,
+            'secretKeyUsed' => $this->secretKey,
+        ]);
+
+        return $signature;
+    }
+
+    /**
+     * Get transaction history from iPaymu.
+     * 
+     * @param string $orderBy Order by field (default: 'id')
+     * @param string $order Order direction (default: 'DESC')
+     * @param int $limit Number of records to fetch (default: 20)
+     * @param int $page Page number (default: 1)
+     * @return array
+     */
+    public function getTransactionHistory(string $orderBy = 'id', string $order = 'DESC', int $limit = 20, int $page = 1): array
+    {
+        // For history API, we use the same method as payment API (JSON signature)
+        $body = [
+            'orderBy' => $orderBy,
+            'order' => $order,
+            'limit' => (string)$limit,
+            'page' => (string)$page,
+        ];
+        
+        // Use callApi method which uses JSON signature (same as payment API)
+        return $this->callApi('post', '/history', $body);
+    }
+
+    /**
+     * Find transaction by reference ID from history.
+     * 
+     * @param string $referenceId The reference ID to search for
+     * @param int $maxPages Maximum pages to search (default: 5)
+     * @return array|null Transaction data if found, null otherwise
+     */
+    public function findTransactionByReferenceId(string $referenceId, int $maxPages = 5): ?array
+    {
+        Log::info("Searching for transaction with reference_id: {$referenceId}");
+        
+        for ($page = 1; $page <= $maxPages; $page++) {
+            try {
+                $historyResponse = $this->getTransactionHistory('id', 'DESC', 20, $page);
+                
+                if (!isset($historyResponse['Data']['Transaction'])) {
+                    Log::warning("No transactions found in history page {$page}");
+                    break;
+                }
+                
+                $transactions = $historyResponse['Data']['Transaction'];
+                
+                foreach ($transactions as $transaction) {
+                    if ($transaction['ReferenceId'] === $referenceId) {
+                        Log::info("Transaction found for reference_id {$referenceId}", [
+                            'transaction_id' => $transaction['TransactionId'],
+                            'status' => $transaction['StatusDesc'],
+                            'amount' => $transaction['Amount'],
+                            'created_date' => $transaction['CreatedDate']
+                        ]);
+                        
+                        return $transaction;
+                    }
+                }
+                
+                // Check if we've reached the end
+                $pagination = $historyResponse['Data']['Pagination'] ?? [];
+                if ($page >= ($pagination['total_pages'] ?? 1)) {
+                    break;
+                }
+                
+            } catch (\Exception $e) {
+                Log::error("Error searching history page {$page}: " . $e->getMessage());
+                break;
+            }
+        }
+        
+        Log::info("Transaction not found for reference_id: {$referenceId}");
+        return null;
     }
 
     /**

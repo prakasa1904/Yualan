@@ -127,6 +127,7 @@ const features = [
                         Mulai Sekarang
                     </Link>
                     <a
+                        v-if="userDocsUrl"
                         :href="userDocsUrl"
                         target="_blank"
                         rel="noopener noreferrer"

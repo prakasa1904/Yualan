@@ -259,6 +259,20 @@ class SaleController extends Controller
                 // Update sale status to 'pending'
                 $sale->update(['status' => 'pending', 'notes' => 'Menunggu pembayaran via iPaymu.']);
                 
+                // Debug log untuk melihat response structure
+                Log::info('iPaymu Initiate Payment Response Structure', [
+                    'response' => $response,
+                    'sale_id' => $sale->id,
+                    'available_keys' => array_keys($response['Data'] ?? [])
+                ]);
+                
+                // Ambil transaction_id dengan fallback untuk berbagai kemungkinan field name
+                $transactionId = $response['Data']['TransactionId'] 
+                    ?? $response['Data']['transactionId'] 
+                    ?? $response['Data']['trx_id']
+                    ?? $response['Data']['id']
+                    ?? null;
+                
                 // Create a payment record
                 Payment::create([
                     'id' => Str::uuid(),
@@ -268,9 +282,20 @@ class SaleController extends Controller
                     'amount' => $sale->total_amount,
                     'currency' => 'IDR',
                     'status' => 'pending',
-                    'transaction_id' => $response['Data']['TransactionId'] ?? null,
+                    'transaction_id' => $transactionId,
                     'gateway_response' => $response,
-                    'notes' => 'Pembayaran iPaymu diinisiasi',
+                    'notes' => 'Pembayaran iPaymu diinisiasi - TRX ID: ' . ($transactionId ?? 'null'),
+                ]);
+                
+                Log::info('Payment record created', [
+                    'sale_id' => $sale->id,
+                    'transaction_id' => $transactionId,
+                    'extracted_from_response' => [
+                        'TransactionId' => $response['Data']['TransactionId'] ?? 'not_found',
+                        'transactionId' => $response['Data']['transactionId'] ?? 'not_found',
+                        'trx_id' => $response['Data']['trx_id'] ?? 'not_found',
+                        'id' => $response['Data']['id'] ?? 'not_found',
+                    ]
                 ]);
 
                 // Return Inertia response with the iPaymu URL

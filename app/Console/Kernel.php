@@ -14,6 +14,19 @@ class Kernel extends ConsoleKernel
     {
         // Jadwalkan command update subscription setiap hari
         $schedule->command('tenant:update-subscription-status')->daily();
+        
+        // Jadwalkan pengecekan status transaksi iPaymu yang pending
+        // Jalankan setiap 5 menit untuk transaksi dalam 24 jam terakhir
+        $schedule->command('yualan:check-pending-transactions --limit=100 --hours=24')
+                ->everyFiveMinutes()
+                ->withoutOverlapping(10) // Prevent overlapping executions
+                ->runInBackground();
+        
+        // Jalankan pengecekan yang lebih intensif setiap jam untuk transaksi dalam 72 jam terakhir
+        $schedule->command('yualan:check-pending-transactions --limit=200 --hours=72')
+                ->hourly()
+                ->withoutOverlapping(15)
+                ->runInBackground();
     }
 
     /**
