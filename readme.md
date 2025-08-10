@@ -110,7 +110,6 @@ Dokumentasi komprehensif tersedia di folder `/docs`:
 - **[🚀 Installation Guide](docs/installation.md)** - Panduan instalasi step-by-step  
 - **[👨‍💻 Development Guide](docs/development-guide.md)** - Panduan pengembangan dan kontribusi
 - **[🗄️ Database Schema](docs/database-schema.md)** - Struktur database lengkap
-- **[🔌 API Documentation](docs/api-documentation.md)** - Dokumentasi REST API
 - **[☁️ Deployment Guide](docs/deployment.md)** - Panduan deployment production
 - **[⚙️ Server Requirements](docs/server-requirement.md)** - Spesifikasi server dan konfigurasi
 - **[⏰ Scheduler Guide](docs/scheduler.md)** - Automated tasks dan cron jobs
