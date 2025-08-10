@@ -12,7 +12,6 @@ Selamat datang di dokumentasi lengkap Yualan POS! Pilih topik yang ingin Anda pe
 ### 👨‍💻 Development
 - **[💻 Development Guide](development-guide.md)** - Panduan pengembangan, testing, dan code style
 - **[🗄️ Database Schema](database-schema.md)** - Struktur database, relationships, dan migration guide
-- **[🔌 API Documentation](api-documentation.md)** - REST API endpoints, authentication, dan contoh penggunaan
 - **[⏰ Scheduler Guide](scheduler.md)** - Automated tasks, cron jobs, dan background processing
 
 ### 🚀 Deployment & Operations
