@@ -33,7 +33,6 @@ Selamat datang di dokumentasi lengkap Yualan POS! Pilih topik yang ingin Anda pe
 **🚀 Memulai menggunakan Yualan POS**
 1. Baca [Project Overview](README.md) untuk memahami fitur dan arsitektur
 2. Ikuti [Installation Guide](installation.md) untuk setup development
-3. Lihat [API Documentation](api-documentation.md) jika ingin integrasi
 
 **👨‍💻 Berkontribusi pada development**
 1. Baca [Contributing Guide](contributing.md) untuk process dan guidelines
@@ -62,7 +61,6 @@ Selamat datang di dokumentasi lengkap Yualan POS! Pilih topik yang ingin Anda pe
 | [installation.md](installation.md) | ✅ Complete | 2024-08-10 |
 | [development-guide.md](development-guide.md) | ✅ Complete | 2024-08-10 |
 | [database-schema.md](database-schema.md) | ✅ Complete | 2024-08-10 |
-| [api-documentation.md](api-documentation.md) | ✅ Complete | 2024-08-10 |
 | [deployment.md](deployment.md) | ✅ Complete | 2024-08-10 |
 | [server-requirement.md](server-requirement.md) | ✅ Complete | 2024-08-10 |
 | [scheduler.md](scheduler.md) | ✅ Complete | 2024-08-10 |
