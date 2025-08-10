@@ -175,9 +175,7 @@ MAIL_FROM_ADDRESS=noreply@yourdomain.com
 MAIL_FROM_NAME="Yualan POS"
 
 # iPaymu Configuration (Production)
-IPAYMU_API_KEY=your_production_api_key
-IPAYMU_SECRET_KEY=your_production_secret_key
-IPAYMU_MODE=production
+MOVED TO DATABASE
 ```
 
 ### 5. Database Migration
