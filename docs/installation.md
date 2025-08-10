@@ -167,17 +167,7 @@ Tambahkan baris berikut:
 
 ## Configuration
 
-### 1. Payment Gateway (iPaymu)
-
-Edit `.env` untuk konfigurasi default iPaymu:
-
-```env
-IPAYMU_API_KEY=your_api_key
-IPAYMU_SECRET_KEY=your_secret_key
-IPAYMU_MODE=sandbox  # atau production
-```
-
-### 2. Mail Configuration
+### 1. Mail Configuration
 
 ```env
 MAIL_MAILER=smtp
@@ -190,7 +180,7 @@ MAIL_FROM_ADDRESS=your-email@example.com
 MAIL_FROM_NAME="Yualan POS"
 ```
 
-### 3. Cache Configuration (Production)
+### 2. Cache Configuration (Production)
 
 ```env
 CACHE_DRIVER=redis  # atau file
