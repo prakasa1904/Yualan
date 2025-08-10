@@ -1,8 +1,4 @@
 
-<img width="1080" height="1080" alt="New Website ##Yualan POS dilengkapi dengan sistem subscription management yang canggih:
-
-### � Subscription & Billing Sistem SaaS & Subscriptionlue Mockup Instagram - Laptop" src="https://github.com/user-attachments/assets/f4960632-a9a1-4a45-aa05-74e8acd74834" />
-
 # ✨ Yualan POS
 
 > **Solusi Point of Sale (POS) berbasis SaaS yang ringan, powerful, dan open source**
