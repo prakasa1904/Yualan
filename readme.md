@@ -1,4 +1,6 @@
 
+<img width="1080" height="1080" alt="Yualan POS (2)" src="https://github.com/user-attachments/assets/1057787c-9f71-444e-ab98-86a7fdea9b69" />
+
 # ✨ Yualan POS
 
 > **Solusi Point of Sale (POS) berbasis SaaS yang ringan, powerful, dan open source**
