@@ -58,11 +58,6 @@ Yualan POS dilengkapi dengan sistem **Subscription Management** yang canggih unt
 - **Status Langganan**: Tampilan status subscription di sidebar
 - **Trial Days**: Pengaturan masa percobaan untuk tenant baru
 
-### 🎨 User Experience
-- **Sidebar Style**: Desain sidebar yang lebih modern dan informatif
-- **Login Button**: Warna tombol login yang lebih menarik
-- **Discount Pricing**: Perbaikan sistem diskon pada pricing plan
-
 ### ⚙️ Pengaturan Tenant
 - **Trial Period Settings**: Konfigurasi hari percobaan untuk tenant baru
 - **Subscription Status**: Monitor status berlangganan secara real-time
