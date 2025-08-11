@@ -185,6 +185,11 @@ const footerNavItems: NavItem[] = [
                         <span class="font-medium">Berlaku Hingga:</span>
                         <span>&nbsp;{{ tenant?.subscription_ends_at || '-' }}</span>
                     </span>
+                    <div class="text-center">
+                        <Link :href="`/subscription/payment`" class="mt-2 block w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-center">
+                            Perpanjang Langganan
+                        </Link>
+                    </div>
                 </div>
             </div>
             <div class="border-t pt-3 mt-2">
