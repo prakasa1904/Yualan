@@ -8,16 +8,31 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request; // Import Request for handleNotification
 
+/**
+ * iPaymu Payment Gateway Service
+ * 
+ * This service handles all interactions with the iPaymu payment gateway API.
+ * 
+ * SSL Verification:
+ * - SSL verification is always disabled for all environments (including production)
+ * - WARNING: This bypasses critical security checks and is not recommended for production
+ * - This setting ignores SSL certificate verification issues but reduces security
+ */
 class IpaymuService
 {
     protected $apiKey; // Ini adalah VA Number
     protected $secretKey; // Ini adalah Secret Key / API Key
     protected $baseUrl;
     protected $mode; // sandbox or production
+    protected $verifySSL; // SSL verification flag
 
     public function __construct(Tenant $tenant)
     {
         $this->mode = $tenant->ipaymu_mode ?: 'production'; // Default ke production
+        
+        // Set SSL verification - always disabled for all environments
+        // WARNING: SSL verification is disabled for all modes (including production)
+        $this->verifySSL = false;
 
         // Coba dapatkan kredensial dari tenant dulu
         $this->apiKey = $tenant->ipaymu_api_key;
@@ -96,9 +111,19 @@ class IpaymuService
 
         Log::info("iPaymu API Call: {$method} {$url}", ['body' => $body, 'headers' => $headers]);
 
+        $response = null;
         try {
-            $response = Http::withHeaders($headers)
-                            ->{$method}($url, $body);
+            $httpClient = Http::withHeaders($headers);
+            
+            // Configure SSL verification based on settings
+            if (!$this->verifySSL) {
+                Log::warning('iPaymu API: SSL verification disabled - not recommended for production!');
+                $httpClient = $httpClient->withOptions([
+                    'verify' => false, // Disable SSL certificate verification
+                ]);
+            }
+            
+            $response = $httpClient->{$method}($url, $body);
 
             $response->throw(); // Melemparkan pengecualian jika terjadi kesalahan klien atau server
 
@@ -109,7 +134,7 @@ class IpaymuService
             Log::error("iPaymu API Error: {$e->getMessage()}", [
                 'url' => $url,
                 'body' => $body,
-                'response_body' => $response->body() ?? 'N/A',
+                'response_body' => $response ? $response->body() : 'N/A',
                 'exception' => $e,
             ]);
             throw new \Exception("Panggilan API iPaymu gagal: " . $e->getMessage());

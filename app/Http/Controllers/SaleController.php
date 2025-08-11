@@ -298,16 +298,21 @@ class SaleController extends Controller
                     ]
                 ]);
 
-                // Return Inertia response with the iPaymu URL
-                return Inertia::render('Cashier/Order', [
-                    'products' => Product::where('tenant_id', $tenant->id)->with('category')->get(),
-                    'categories' => Category::where('tenant_id', $tenant->id)->get(),
-                    'customers' => Customer::where('tenant_id', $tenant->id)->get(),
-                    'tenantSlug' => $tenant->slug,
-                    'tenantName' => $tenant->name,
-                    'ipaymuConfigured' => (bool)$tenant->ipaymu_api_key && (bool)$tenant->ipaymu_secret_key,
-                    'ipaymuRedirectUrl' => $response['Data']['Url'], // Pass the iPaymu URL to the frontend
-                ]);
+                // Redirect langsung ke halaman pembayaran iPaymu
+                if (isset($response['Data']['Url']) && !empty($response['Data']['Url'])) {
+                    Log::info('Redirecting to iPaymu payment page', [
+                        'sale_id' => $sale->id,
+                        'payment_url' => $response['Data']['Url']
+                    ]);
+                    return redirect()->away($response['Data']['Url']);
+                } else {
+                    Log::error('iPaymu payment URL not found in response', [
+                        'response' => $response,
+                        'available_keys' => array_keys($response['Data'] ?? [])
+                    ]);
+                    return redirect()->route('sales.order', ['tenantSlug' => $tenant->slug])
+                        ->with('error', 'URL pembayaran iPaymu tidak ditemukan dalam response.');
+                }
             } else {
                 Log::error('iPaymu API Error: ' . json_encode($response));
                 return redirect()->route('sales.order', ['tenantSlug' => $tenant->slug])
