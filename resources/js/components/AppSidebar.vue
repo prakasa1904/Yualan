@@ -141,6 +141,18 @@ const footerNavItems: NavItem[] = [
         icon: BookOpen,
     },
 ];
+
+const isSubscriptionExpired = computed(() => {
+    
+    if (userRole.value !== 'superadmin') {
+        const today = new Date();
+      const todayFormatted = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      return todayFormatted >= props?.tenant?.subscription_ends_at;
+    } else {
+        return null;
+    }
+  
+});
 </script>
 
 <template>
@@ -166,9 +178,10 @@ const footerNavItems: NavItem[] = [
         </SidebarContent>
 
         <SidebarFooter
-            class="px-4 py-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+                    class="px-4 py-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
         >
             <div
+                v-if="userRole !== 'superadmin'"
                 class="p-3 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs text-gray-700 dark:text-gray-200"
             >
                 <h4 class="font-semibold text-sm mb-2 text-gray-800 dark:text-gray-100">Status Langganan</h4>
@@ -185,7 +198,7 @@ const footerNavItems: NavItem[] = [
                         <span class="font-medium">Berlaku Hingga:</span>
                         <span>&nbsp;{{ tenant?.subscription_ends_at || '-' }}</span>
                     </span>
-                    <div class="text-center">
+                    <div class="text-center" v-if="isSubscriptionExpired">
                         <Link :href="`/subscription/payment`" class="mt-2 block w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-center">
                             Perpanjang Langganan
                         </Link>
