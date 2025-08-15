@@ -8,7 +8,7 @@ import { DollarSign, Package, Users, BarChart, CreditCard, Cloud, ShieldCheck } 
 const page = usePage();
 const user = computed<any>(() => (page.props as any)?.auth?.user as any);
 const pricingPlans = computed<any[]>(() => (page.props as any).pricingPlans || []);
-const trialDays = computed<number>(() => Number((page.props as any).trialDays || 0));
+const trialDays = computed<any>(() => (page.props as any).trialDays || '');
 
 // Mengambil nama aplikasi dari variabel lingkungan VITE_APP_NAME
 // Pastikan variabel ini didefinisikan di file .env Anda (misal: VITE_APP_NAME="Yualan POS")
@@ -140,8 +140,8 @@ const features = [
             </div>
         </section>
 
-    <!-- Pricing Section (from DB) -->
-    <PricingSection :plans="pricingPlans" :trialDays="trialDays" :isAuthenticated="!!user" />
+        <!-- Pricing Section (from DB) -->
+        <PricingSection v-if="String(trialDays) !== 'INTERNAL'" :plans="pricingPlans" :trialDays="trialDays" :isAuthenticated="!!user" />
 
         <!-- Features Section -->
         <section class="py-16 sm:py-24 bg-white dark:bg-gray-800">

@@ -13,6 +13,9 @@ class SaasSettingsController extends Controller
     {
         $settings = SaasSetting::all();
         $settingDetails = [
+            'trial_days' => [
+                'info' => 'This is the number of trial days for new users. Set to "INTERNAL" for fully internal use case.',
+            ],
             'ipaymu_va' => [
                 'info' => 'This is your iPaymu Virtual Account number for SaaS plan payments.',
             ],

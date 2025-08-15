@@ -36,7 +36,7 @@ Route::get('/', function () {
         ->orderBy('price')
         ->get();
 
-    $trialDays = (int) SaasSetting::get('trial_days', 0);
+    $trialDays = SaasSetting::get('trial_days', 'INTERNAL');
 
     return Inertia::render('Welcome', [
         'pricingPlans' => $plans,

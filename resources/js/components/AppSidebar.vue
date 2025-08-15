@@ -27,6 +27,9 @@ const userRole = computed(() => page.props.auth.user?.role as string | undefined
 // Tenant info via AJAX to ensure fresh data even when Inertia props don't include tenant
 const tenant = ref<any | null>(null);
 
+// Define trialDays, update when tenant changes
+const trialDays = computed(() => tenant.value?.trial_days ?? 'INTERNAL');
+
 async function fetchTenantInfo(slug?: string) {
     if (!slug) {
         tenant.value = null;
@@ -180,8 +183,9 @@ const isSubscriptionExpired = computed(() => {
         <SidebarFooter
                     class="px-4 py-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
         >
+        
             <div
-                v-if="userRole !== 'superadmin'"
+                v-if="userRole !== 'superadmin' && String(trialDays) !== 'INTERNAL'"
                 class="p-3 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs text-gray-700 dark:text-gray-200"
             >
                 <h4 class="font-semibold text-sm mb-2 text-gray-800 dark:text-gray-100">Status Langganan</h4>

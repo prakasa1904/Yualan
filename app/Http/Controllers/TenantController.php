@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Tenant;
 use Illuminate\Http\Request;
+use App\Models\SaasSetting;
 
 class TenantController extends Controller
 {
@@ -14,6 +15,8 @@ class TenantController extends Controller
     {
         $tenant = Tenant::with('pricingPlan')->where('slug', $tenantSlug)->firstOrFail();
 
+        $isInternal = SaasSetting::get('trial_days', 'INTERNAL');
+
         return response()->json([
             'id' => $tenant->id,
             'name' => $tenant->name,
@@ -22,6 +25,7 @@ class TenantController extends Controller
             'plan_name' => optional($tenant->pricingPlan)->plan_name,
             'is_subscribed' => (bool) $tenant->is_subscribed,
             'subscription_ends_at' => optional($tenant->subscription_ends_at)?->toDateString(),
+            'isInternal' => $isInternal
         ]);
     }
 }
