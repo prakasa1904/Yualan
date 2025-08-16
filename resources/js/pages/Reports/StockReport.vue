@@ -6,6 +6,7 @@ import { computed, ref } from 'vue';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatCurrency } from '@/utils/formatters'; // Import the formatter
 import { Package, AlertTriangle, CheckCircle } from 'lucide-vue-next'; // Icons for stock status
+import * as XLSX from 'xlsx'; // pastikan sudah install: npm i xlsx
 
 interface Product {
     name: string;
@@ -55,6 +56,65 @@ const getStockStatus = (stock: number) => {
         return { text: 'Tersedia', class: 'text-green-600 dark:text-green-400', icon: CheckCircle };
     }
 };
+
+const exportToExcel = () => {
+    // Prepare worksheet data
+    const sheetData = [
+        [
+            'No.',
+            'Nama Produk',
+            'SKU',
+            'Stok Saat Ini',
+            'Unit',
+            'Harga Pokok Rata-rata',
+            'Harga Jual',
+            'Nilai Stok Produk',
+            'Status Stok'
+        ],
+        ...sortedProducts.value.map((product, idx) => {
+            const status = getStockStatus(product.stock).text;
+            return [
+                idx + 1,
+                product.name,
+                product.sku || '-',
+                product.stock,
+                product.unit || '-',
+                product.cost_price,
+                product.price,
+                product.stock * product.cost_price,
+                status
+            ];
+        }),
+        [
+            '', '', '', '', '', '', 'Total Nilai Stok', props.totalStockValue, ''
+        ]
+    ];
+
+    // Create worksheet and workbook
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    // Format header row
+    for (let i = 0; i < 9; i++) {
+        ws[XLSX.utils.encode_cell({ r: 0, c: i })].s = {
+            font: { bold: true },
+            fill: { fgColor: { rgb: 'E0ECFF' } }
+        };
+    }
+    // Format total row
+    ws[XLSX.utils.encode_cell({ r: sheetData.length - 1, c: 6 })].s = {
+        font: { bold: true },
+        fill: { fgColor: { rgb: 'FFF9C4' } }
+    };
+    ws[XLSX.utils.encode_cell({ r: sheetData.length - 1, c: 7 })].s = {
+        font: { bold: true },
+        fill: { fgColor: { rgb: 'FFF9C4' } }
+    };
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Laporan Stok');
+
+    // Export
+    XLSX.writeFile(wb, `Laporan_Stok_${props.tenantName || 'Toko'}.xlsx`);
+};
 </script>
 
 <template>
@@ -66,6 +126,10 @@ const getStockStatus = (stock: number) => {
                 <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     Laporan Nilai Stok {{ tenantName ? `(${tenantName})` : '' }}
                 </h1>
+                <Button @click="exportToExcel" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg shadow">
+                    <Package class="h-5 w-5" />
+                    Export Excel
+                </Button>
             </div>
 
             <!-- Total Stock Value Card -->
@@ -114,6 +178,15 @@ const getStockStatus = (stock: number) => {
                                     {{ getStockStatus(product.stock).text }}
                                 </span>
                             </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell colspan="7" class="text-right font-bold text-gray-700 dark:text-gray-200 bg-blue-50 dark:bg-blue-900">
+                                Total Nilai Stok
+                            </TableCell>
+                            <TableCell class="font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900">
+                                {{ formatCurrency(totalStockValue) }}
+                            </TableCell>
+                            <TableCell class="bg-blue-50 dark:bg-blue-900"></TableCell>
                         </TableRow>
                     </TableBody>
                 </Table>
