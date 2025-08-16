@@ -28,6 +28,7 @@ use Inertia\Inertia;
 use App\Models\PricingPlan;
 use App\Models\SaasSetting;
 use App\Http\Controllers\EmployeeController;
+use App\Models\Tenant;
 
 Route::get('/', function () {
     $plans = PricingPlan::query()
@@ -293,6 +294,12 @@ Route::middleware(['auth', 'tenant.access'])->group(function () {
     Route::post('/{tenantSlug}/products/import', [\App\Http\Controllers\ProductImportController::class, 'import'])->name('products.import');
     Route::post('/{tenantSlug}/products/import/error-rows', [\App\Http\Controllers\ProductImportController::class, 'importErrorRows'])->name('products.import.error-rows');
     Route::get('/products/import/sample', [\App\Http\Controllers\ProductImportController::class, 'downloadSample'])->name('products.import.sample');
+});
+
+// Laporan Pembayaran & Piutang
+Route::middleware(['auth', 'tenant.access'])->group(function () {
+    Route::get('/{tenantSlug}/reports/payments', [\App\Http\Controllers\Reports\PaymentsReportController::class, 'index'])
+        ->name('reports.payments');
 });
 
 require __DIR__.'/settings.php';

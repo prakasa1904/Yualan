@@ -6,7 +6,7 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 // Pastikan semua ikon yang digunakan diimpor
-import { BookOpen, Folder, LayoutGrid, Tag, Package, Users, ShoppingBag, History, Warehouse, BarChart, Truck } from 'lucide-vue-next'; // Tambahkan Warehouse dan BarChart
+import { BookOpen, Folder, LayoutGrid, Tag, Package, Users, ShoppingBag, History, Warehouse, BarChart, Truck, FileText } from 'lucide-vue-next'; // Tambahkan Warehouse dan BarChart
 
 import AppLogo from './AppLogo.vue';
 import { computed, onMounted, ref, watch } from 'vue';
@@ -126,6 +126,8 @@ const mainNavItems = computed<NavItem[]>(() => {
                 { title: 'Nilai Stok', href: route('reports.stock', { tenantSlug: tenantSlug.value }) },
                 // Laporan Penjualan Detail: Export transaksi penjualan lengkap (per hari/bulan/tahun), termasuk item, metode pembayaran, diskon, pajak, dan kasir.
                 { title: 'Penjualan Detail', href: route('reports.salesDetail', { tenantSlug: tenantSlug.value }) },
+                // Tambahkan link Pembayaran & Piutang
+                { title: 'Pembayaran & Piutang', href: route('reports.payments', { tenantSlug: tenantSlug.value }) },
             ],
             icon: BarChart,
             href: '' // href for parent is optional if children exist
