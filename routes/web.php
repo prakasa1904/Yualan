@@ -1,4 +1,3 @@
-
 <?php
 
 use App\Http\Controllers\CategoryController;
@@ -28,6 +27,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Models\PricingPlan;
 use App\Models\SaasSetting;
+use App\Http\Controllers\EmployeeController;
 
 Route::get('/', function () {
     $plans = PricingPlan::query()
@@ -274,5 +274,16 @@ Route::post('/subscription/notify', [\App\Http\Controllers\SubscriptionControlle
 // Ini harus dapat diakses secara global oleh iPaymu
 Route::post('/sales/ipaymu/notify', [SaleController::class, 'ipaymuNotify'])->name('sales.ipaymuNotify');
 
+Route::middleware(['auth', 'tenant.access'])->group(function () {
+    Route::get('/{tenantSlug}/employees', [EmployeeController::class, 'index'])->name('employees.index');
+    Route::post('/{tenantSlug}/employees', [EmployeeController::class, 'store'])->name('employees.store');
+    Route::post('/{tenantSlug}/employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
+    Route::delete('/{tenantSlug}/employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
+    Route::put('employees/{employee}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
+    Route::put('employees/{employee}/change-password', [EmployeeController::class, 'changePassword'])->name('employees.change_password');
+});
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
+
+

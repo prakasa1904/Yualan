@@ -127,6 +127,11 @@ const mainNavItems = computed<NavItem[]>(() => {
             icon: BarChart,
             href: '' // href for parent is optional if children exist
         });
+        items.push({
+            title: 'Karyawan',
+            href: route('employees.index', { tenantSlug: tenantSlug.value }),
+            icon: Users,
+        });
     }
 
     return items;
