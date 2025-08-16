@@ -133,4 +133,12 @@ class Sale extends Model
     {
         return $this->hasMany(Payment::class);
     }
+
+    /**
+     * Get the items for the Sale.
+     */
+    public function items()
+    {
+        return $this->hasMany(\App\Models\SaleItem::class, 'sale_id');
+    }
 }

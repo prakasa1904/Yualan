@@ -223,7 +223,11 @@ Route::middleware('auth')->group(function () {
         Route::prefix('reports')->group(function () { // Removed leading '/'
             Route::get('gross-profit', [ReportController::class, 'grossProfitReport'])->name('reports.grossProfit'); // Removed leading '/'
             Route::get('stock', [ReportController::class, 'stockReport'])->name('reports.stock'); // Removed leading '/'
+            Route::get('sales-detail', [\App\Http\Controllers\ReportSalesDetailController::class, 'index'])
+                ->name('reports.salesDetail');
         });
+
+        Route::get('/reports/net-profit', [\App\Http\Controllers\Reports\NetProfitController::class, 'index'])->name('reports.netProfit');
 
         // Master Suppliers routes, tenant-scoped (NEW)
         Route::resource('suppliers', SupplierController::class); // Removed leading '/'
@@ -250,6 +254,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/invoices/history', [SaasInvoiceHistoryController::class, 'index'])->name('invoices.history');
     });
 
+    
     Route::get('/{tenantSlug}/invoice/{id}', [SaasInvoiceController::class, 'show'])->name('invoice.show');
 
     /**

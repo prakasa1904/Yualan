@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, usePage, router } from '@inertiajs/vue3'; // import router here
 import { computed, ref } from 'vue';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatCurrency } from '@/utils/formatters'; // Import the formatter
@@ -115,6 +115,24 @@ const exportToExcel = () => {
     // Export
     XLSX.writeFile(wb, `Laporan_Stok_${props.tenantName || 'Toko'}.xlsx`);
 };
+
+const search = ref('');
+const sort = ref('name_asc'); // default sort by name ascending
+
+const handleSearchSort = () => {
+    router.get(
+        route('reports.stock', { tenantSlug: props.tenantSlug }),
+        {
+            search: search.value,
+            sort: sort.value,
+        },
+        {
+            preserveState: true,
+            replace: true,
+            preserveScroll: true,
+        }
+    );
+};
 </script>
 
 <template>
@@ -130,6 +148,25 @@ const exportToExcel = () => {
                     <Package class="h-5 w-5" />
                     Export Excel
                 </Button>
+            </div>
+
+            <!-- Search & Sort Controls -->
+            <div class="flex items-center gap-4 mb-4">
+                <input
+                    v-model="search"
+                    @input="handleSearchSort"
+                    type="text"
+                    placeholder="Cari produk, SKU, unit..."
+                    class="border rounded px-3 py-2 w-64"
+                />
+                <select v-model="sort" @change="handleSearchSort" class="border rounded px-3 py-2">
+                    <option value="name_asc">Nama Produk (A-Z)</option>
+                    <option value="name_desc">Nama Produk (Z-A)</option>
+                    <option value="stock_asc">Stok Terendah</option>
+                    <option value="stock_desc">Stok Tertinggi</option>
+                    <option value="price_asc">Harga Jual Terendah</option>
+                    <option value="price_desc">Harga Jual Tertinggi</option>
+                </select>
             </div>
 
             <!-- Total Stock Value Card -->

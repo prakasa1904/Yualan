@@ -37,6 +37,7 @@ class SaleItem extends Model
         'quantity',
         'price',
         'subtotal',
+        'cost_price_at_sale'
     ];
 
     /**

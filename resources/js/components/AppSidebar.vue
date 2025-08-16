@@ -122,7 +122,10 @@ const mainNavItems = computed<NavItem[]>(() => {
             title: 'Laporan', // NEW MAIN MENU ITEM
             children: [
                 { title: 'Laba Kotor', href: route('reports.grossProfit', { tenantSlug: tenantSlug.value }) },
+                { title: 'Laba Bersih', href: route('reports.netProfit', { tenantSlug: tenantSlug.value }) },
                 { title: 'Nilai Stok', href: route('reports.stock', { tenantSlug: tenantSlug.value }) },
+                // Laporan Penjualan Detail: Export transaksi penjualan lengkap (per hari/bulan/tahun), termasuk item, metode pembayaran, diskon, pajak, dan kasir.
+                { title: 'Penjualan Detail', href: route('reports.salesDetail', { tenantSlug: tenantSlug.value }) },
             ],
             icon: BarChart,
             href: '' // href for parent is optional if children exist

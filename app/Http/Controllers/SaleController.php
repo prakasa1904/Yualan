@@ -146,6 +146,7 @@ class SaleController extends Controller
                 'quantity' => $item['quantity'],
                 'price' => $product->price, // Price at the time of sale
                 'subtotal' => $itemSubtotal,
+                'cost_price_at_sale' => (float)$product->cost_price, // Explicitly cast to float
             ];
         }
 
