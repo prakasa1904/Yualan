@@ -88,4 +88,71 @@ class ReportController extends Controller
             'tenantName' => $tenant->name,
         ]);
     }
+
+    public function productMargin(Request $request, $tenantSlug)
+    {
+        $tenant = Tenant::where('slug', $tenantSlug)->firstOrFail();
+
+        $search = $request->input('search');
+        $sort = $request->input('sort', 'sold_qty_desc');
+
+        $products = \DB::table('sale_items')
+            ->join('products', 'sale_items.product_id', '=', 'products.id')
+            ->where('products.tenant_id', $tenant->id)
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->whereNull('sales.deleted_at')
+            ->where('sales.status', 'completed')
+            ->whereNull('products.deleted_at')
+            ->selectRaw('
+                products.id,
+                products.name,
+                products.sku,
+                products.unit,
+                products.price,
+                products.cost_price,
+                SUM(sale_items.quantity) as sold_qty,
+                (products.price - products.cost_price) as margin,
+                SUM((sale_items.price - sale_items.cost_price_at_sale) * sale_items.quantity) as total_profit
+            ')
+            ->when($search, function ($q) use ($search) {
+                $q->where(function ($qq) use ($search) {
+                    $qq->where('products.name', 'ilike', "%$search%")
+                       ->orWhere('products.sku', 'ilike', "%$search%")
+                       ->orWhere('products.unit', 'ilike', "%$search%");
+                });
+            })
+            ->groupBy('products.id', 'products.name', 'products.sku', 'products.unit', 'products.price', 'products.cost_price')
+            ->orderByRaw(
+                $sort === 'sold_qty_desc' ? 'sold_qty DESC' :
+                ($sort === 'sold_qty_asc' ? 'sold_qty ASC' :
+                ($sort === 'margin_desc' ? 'margin DESC' :
+                ($sort === 'margin_asc' ? 'margin ASC' :
+                ($sort === 'profit_desc' ? 'total_profit DESC' :
+                ($sort === 'profit_asc' ? 'total_profit ASC' : 'sold_qty DESC')))))
+            )
+            ->get();
+
+        $totalProfit = $products->sum('total_profit');
+        $products = $products->map(function ($p) use ($totalProfit) {
+            $contribution = $totalProfit > 0 ? ($p->total_profit / $totalProfit) : 0;
+            return [
+                'name' => $p->name,
+                'sku' => $p->sku,
+                'sold_qty' => (int) $p->sold_qty,
+                'price' => (float) $p->price,
+                'cost_price' => (float) $p->cost_price,
+                'margin' => (float) $p->margin,
+                'total_profit' => (float) $p->total_profit,
+                'contribution' => $contribution,
+                'unit' => $p->unit,
+            ];
+        });
+
+        return inertia('Reports/ProductMargin', [
+            'products' => $products,
+            'totalProfit' => $totalProfit,
+            'tenantSlug' => $tenant->slug,
+            'tenantName' => $tenant->name,
+        ]);
+    }
 }

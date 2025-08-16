@@ -300,6 +300,7 @@ Route::middleware(['auth', 'tenant.access'])->group(function () {
 Route::middleware(['auth', 'tenant.access'])->group(function () {
     Route::get('/{tenantSlug}/reports/payments', [\App\Http\Controllers\Reports\PaymentsReportController::class, 'index'])
         ->name('reports.payments');
+    Route::get('/{tenantSlug}/reports/product-margin', [ReportController::class, 'productMargin'])->name('reports.product-margin');
 });
 
 require __DIR__.'/settings.php';
