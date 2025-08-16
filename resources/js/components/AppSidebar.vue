@@ -28,7 +28,7 @@ const userRole = computed(() => page.props.auth.user?.role as string | undefined
 const tenant = ref<any | null>(null);
 
 // Define trialDays, update when tenant changes
-const trialDays = computed(() => tenant.value?.trial_days ?? 'INTERNAL');
+const trialDays = computed(() => tenant.value?.isInternal ?? 'INTERNAL');
 
 async function fetchTenantInfo(slug?: string) {
     if (!slug) {
@@ -161,7 +161,7 @@ const isSubscriptionExpired = computed(() => {
     if (userRole.value !== 'superadmin') {
         const today = new Date();
       const todayFormatted = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      return todayFormatted >= props?.tenant?.subscription_ends_at;
+      return todayFormatted >= tenant.value?.subscription_ends_at;
     } else {
         return null;
     }
@@ -194,7 +194,7 @@ const isSubscriptionExpired = computed(() => {
         <SidebarFooter
                     class="px-4 py-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
         >
-        
+
             <div
                 v-if="userRole !== 'superadmin' && String(trialDays) !== 'INTERNAL'"
                 class="p-3 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs text-gray-700 dark:text-gray-200"
