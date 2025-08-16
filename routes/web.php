@@ -283,6 +283,13 @@ Route::middleware(['auth', 'tenant.access'])->group(function () {
     Route::put('employees/{employee}/change-password', [EmployeeController::class, 'changePassword'])->name('employees.change_password');
 });
 
+// Excel import routes
+Route::middleware(['auth', 'tenant.access'])->group(function () {
+    Route::post('/{tenantSlug}/products/import', [\App\Http\Controllers\ProductImportController::class, 'import'])->name('products.import');
+    Route::post('/{tenantSlug}/products/import/error-rows', [\App\Http\Controllers\ProductImportController::class, 'importErrorRows'])->name('products.import.error-rows');
+    Route::get('/products/import/sample', [\App\Http\Controllers\ProductImportController::class, 'downloadSample'])->name('products.import.sample');
+});
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
 

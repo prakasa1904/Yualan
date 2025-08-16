@@ -10,7 +10,7 @@ import InputError from '@/components/InputError.vue';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { LoaderCircle, PlusCircle, Edit, Trash2, ChevronUp, ChevronDown, Search, Image as ImageIcon, XCircle } from 'lucide-vue-next';
+import { LoaderCircle, PlusCircle, Edit, Trash2, ChevronUp, ChevronDown, Search, Image as ImageIcon, XCircle, UploadCloud } from 'lucide-vue-next';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatCurrency } from '@/utils/formatters'; // Import formatCurrency
@@ -69,7 +69,10 @@ const props = defineProps<{
 
 // Inertia page props
 const page = usePage();
+// Get CSRF token from page props (Laravel provides it as 'csrf_token' or 'csrfToken')
+const csrfToken = computed(() => page.props.csrf_token || page.props.csrfToken || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'));
 
+// Breadcrumbs
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Dashboard',
@@ -111,6 +114,16 @@ const isFormDialogOpen = ref(false);
 const isConfirmDeleteDialogOpen = ref(false);
 const productToDelete = ref<Product | null>(null);
 const currentProductImage = ref<string | null>(null); // To display existing image in edit form
+
+// Import dialog state
+const isImportDialogOpen = ref(false);
+const importFile = ref<File | null>(null);
+const importErrors = ref<any[]>([]);
+const importProcessing = ref(false);
+const importProgress = ref(0);
+const importTotalRows = ref(0);
+const importErrorMessage = ref('');
+const importErrorRows = ref<any[]>([]);
 
 // Form title for dialog
 const formTitle = computed(() => (form.id ? 'Edit Produk' : 'Tambah Produk Baru'));
@@ -218,6 +231,121 @@ const deleteProduct = () => {
     });
 };
 
+// Function to open import dialog
+const openImportDialog = () => {
+    importFile.value = null;
+    importErrors.value = [];
+    importProcessing.value = false;
+    importProgress.value = 0;
+    importTotalRows.value = 0;
+    importErrorMessage.value = '';
+    importErrorRows.value = [];
+    isImportDialogOpen.value = true;
+};
+
+// Handle file selection
+const handleImportFileChange = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    if (target.files && target.files[0]) {
+        importFile.value = target.files[0];
+    } else {
+        importFile.value = null;
+    }
+};
+
+// Submit import
+const submitImport = async () => {
+    if (!importFile.value) return;
+    importProcessing.value = true;
+    importProgress.value = 0;
+    importErrorMessage.value = '';
+    importErrorRows.value = [];
+    importErrors.value = [];
+
+    // Prepare FormData
+    const formData = new FormData();
+    formData.append('file', importFile.value);
+    // Add CSRF token to FormData
+    formData.append('_token', csrfToken.value);
+
+    // Use fetch for progress (simulate progress for demo)
+    try {
+        // Simulate progress bar
+        importProgress.value = 10;
+        // Send to backend
+        const response = await fetch(route('products.import', { tenantSlug: props.tenantSlug }), {
+            method: 'POST',
+            body: formData,
+            // No need to set Content-Type for FormData
+        });
+        importProgress.value = 70;
+        const result = await response.json();
+        importProgress.value = 100;
+
+        if (result.success) {
+            // Success, close dialog
+            isImportDialogOpen.value = false;
+            router.reload({ only: ['products'] });
+        } else if (result.error_rows && result.error_rows.length > 0) {
+            // Show error rows for re-import
+            importErrorRows.value = result.error_rows;
+            importTotalRows.value = result.total_rows || result.error_rows.length;
+            importErrorMessage.value = result.message || 'Beberapa baris gagal diimport.';
+        } else {
+            importErrorMessage.value = result.message || 'Gagal mengimport file.';
+        }
+    } catch (err) {
+        importErrorMessage.value = 'Terjadi kesalahan saat import.';
+    } finally {
+        importProcessing.value = false;
+        importProgress.value = 0;
+    }
+};
+
+// Allow user to edit error rows and re-import
+const editedErrorRows = ref<any[]>([]);
+watch(importErrorRows, (rows) => {
+    editedErrorRows.value = rows.map(row => ({ ...row }));
+});
+const submitErrorRowsImport = async () => {
+    if (!editedErrorRows.value.length) return;
+    importProcessing.value = true;
+    importProgress.value = 0;
+    importErrorMessage.value = '';
+
+    try {
+        importProgress.value = 10;
+        // Send error rows to backend for re-import
+        const response = await fetch(route('products.import.error-rows', { tenantSlug: props.tenantSlug }), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken.value, // Add CSRF token to headers
+            },
+            body: JSON.stringify({ rows: editedErrorRows.value, _token: csrfToken.value }),
+        });
+        importProgress.value = 70;
+        const result = await response.json();
+        importProgress.value = 100;
+
+        if (result.success) {
+            isImportDialogOpen.value = false;
+            router.reload({ only: ['products'] });
+        } else if (result.error_rows && result.error_rows.length > 0) {
+            importErrorRows.value = result.error_rows;
+            importTotalRows.value = result.total_rows || result.error_rows.length;
+            importErrorMessage.value = result.message || 'Beberapa baris gagal diimport.';
+        } else {
+            importErrorMessage.value = result.message || 'Gagal mengimport baris error.';
+        }
+    } catch (err) {
+        importErrorMessage.value = 'Terjadi kesalahan saat import.';
+    } finally {
+        importProcessing.value = false;
+        importProgress.value = 0;
+    }
+};
+
 // Function to handle sorting
 const handleSort = (field: string) => {
     if (currentSortBy.value === field) {
@@ -278,6 +406,34 @@ watch(() => form.image, (newImage, oldImage) => {
         URL.revokeObjectURL(oldImage as any); // Revoke old URL to prevent memory leaks
     }
 });
+
+// Download template URL
+const downloadTemplateUrl = computed(() => {
+    // If you use Ziggy or window.route, use that. Otherwise, fallback to hardcoded path.
+    if (typeof route === 'function') {
+        return route('products.import.sample');
+    }
+    return '/products/import/sample';
+});
+
+// Drag and drop area for file import
+const isDragOver = ref(false);
+
+const handleDropAreaDragOver = (event: DragEvent) => {
+    event.preventDefault();
+    isDragOver.value = true;
+};
+const handleDropAreaDragLeave = (event: DragEvent) => {
+    event.preventDefault();
+    isDragOver.value = false;
+};
+const handleDropAreaDrop = (event: DragEvent) => {
+    event.preventDefault();
+    isDragOver.value = false;
+    if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
+        importFile.value = event.dataTransfer.files[0];
+    }
+};
 </script>
 
 <template>
@@ -289,10 +445,16 @@ watch(() => form.image, (newImage, oldImage) => {
                 <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     Master Produk {{ tenantName ? `(${tenantName})` : '' }}
                 </h1>
-                <Button @click="openFormDialog()" class="flex items-center gap-2">
-                    <PlusCircle class="h-4 w-4" />
-                    Tambah Produk
-                </Button>
+                <div class="flex gap-2">
+                    <Button @click="openFormDialog()" class="flex items-center gap-2">
+                        <PlusCircle class="h-4 w-4" />
+                        Tambah Produk
+                    </Button>
+                    <Button @click="openImportDialog" variant="outline" class="flex items-center gap-2">
+                        <UploadCloud class="h-4 w-4" />
+                        Import Excel
+                    </Button>
+                </div>
             </div>
 
             <!-- Filter and Search Section -->
@@ -597,6 +759,144 @@ watch(() => form.image, (newImage, oldImage) => {
                     <Button variant="destructive" @click="deleteProduct" :disabled="form.processing">
                         <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin mr-2" />
                         Hapus
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Import Excel Dialog -->
+        <Dialog v-model:open="isImportDialogOpen">
+            <DialogContent class="w-full min-w-[80vw] min-h-[80vh] max-h-[80vh] overflow-y-auto bg-gradient-to-br from-gray-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-950 dark:to-blue-950 shadow-2xl rounded-xl p-6">
+                <DialogHeader>
+                    <div data-slot="dialog-header" class="flex flex-col gap-1 py-2 text-center sm:text-left">
+                        <h2 id="reka-dialog-title-v-13" data-slot="dialog-title" class="text-2xl font-bold leading-none text-blue-700 flex items-center gap-2">
+                            <UploadCloud class="h-6 w-6 text-blue-500" />
+                            Import Produk dari Excel
+                        </h2>
+                        <p id="reka-dialog-description-v-14" data-slot="dialog-description" class="text-muted-foreground text-base mt-1">
+                            Pilih file Excel (.xls, .xlsx) untuk mengimport produk. Pastikan format sesuai template.
+                            <br>
+                            <a
+                                href="/import_template_produk.xlsx"
+                                target="_blank"
+                                class="inline-flex items-center gap-1 text-blue-600 hover:underline text-sm mt-2"
+                            >
+                                <DownloadCloud class="h-4 w-4" />
+                                Download Template Excel
+                            </a>
+                        </p>
+                    </div>
+                </DialogHeader>
+                <div class="grid gap-6 py-4">
+                    <div class="flex flex-col gap-2">
+                        <Label class="font-medium text-gray-700 dark:text-gray-200">Pilih File Excel</Label>
+                        <div
+                            class="relative flex flex-col items-center justify-center border-2 border-dashed rounded-lg px-6 py-8 transition cursor-pointer"
+                            :class="[
+                                isDragOver
+                                    ? 'border-blue-600 bg-blue-50 dark:border-blue-400 dark:bg-blue-950'
+                                    : 'border-gray-300 bg-white dark:border-gray-700 dark:bg-gray-900',
+                                importProcessing ? 'opacity-50 pointer-events-none' : ''
+                            ]"
+                            @dragover="handleDropAreaDragOver"
+                            @dragleave="handleDropAreaDragLeave"
+                            @drop="handleDropAreaDrop"
+                            @click="$refs.fileInput.click()"
+                        >
+                            <UploadCloud class="h-10 w-10 text-blue-500 dark:text-blue-400 mb-2" />
+                            <span class="text-base font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                Drag & drop file Excel di sini, atau klik untuk memilih file
+                            </span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400 mb-2">Format: .xls, .xlsx</span>
+                            <input
+                                ref="fileInput"
+                                type="file"
+                                accept=".xls,.xlsx"
+                                class="hidden"
+                                :disabled="importProcessing"
+                                @change="handleImportFileChange"
+                            />
+                            <div v-if="importFile" class="mt-2 flex items-center gap-2 text-blue-700 dark:text-blue-300 font-semibold">
+                                <UploadCloud class="h-5 w-5" />
+                                {{ importFile.name }}
+                                <Button variant="ghost" size="icon" @click.stop="importFile = null">
+                                    <XCircle class="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="importProcessing" class="w-full">
+                        <div class="mb-2 text-sm text-blue-700 dark:text-blue-300 font-semibold">Mengimport... ({{ importProgress }}%)</div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-3 overflow-hidden">
+                            <div class="bg-gradient-to-r from-blue-400 to-blue-600 dark:from-blue-700 dark:to-blue-900 h-3 rounded-full transition-all duration-300" :style="{ width: importProgress + '%' }"></div>
+                        </div>
+                    </div>
+                    <div v-if="importErrorMessage" class="flex items-center gap-2 text-red-600 dark:text-red-400 text-base font-medium mt-2">
+                        <XCircle class="h-5 w-5" />
+                        {{ importErrorMessage }}
+                    </div>
+                    <div v-if="importErrorRows.length > 0" class="mt-6">
+                        <div class="mb-3 text-base text-gray-700 dark:text-gray-200 font-semibold flex items-center gap-2">
+                            <AlertTriangle class="h-5 w-5 text-yellow-500 dark:text-yellow-400" />
+                            Baris berikut gagal diimport. Silakan edit dan import ulang.
+                        </div>
+                        <div class="overflow-x-auto rounded-lg shadow border border-gray-200 dark:border-gray-700">
+                            <table class="min-w-full text-sm bg-white dark:bg-gray-900 rounded-lg">
+                                <thead class="bg-blue-100 dark:bg-blue-900 sticky top-0 z-10">
+                                    <tr>
+                                        <th class="border px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">Baris</th>
+                                        <th class="border px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">Nama Produk</th>
+                                        <th class="border px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">SKU</th>
+                                        <th class="border px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">Harga Jual</th>
+                                        <th class="border px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">Harga Pokok</th>
+                                        <th class="border px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">Stok</th>
+                                        <th class="border px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">Unit</th>
+                                        <th class="border px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">Error</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr
+                                        v-for="(row, idx) in editedErrorRows"
+                                        :key="idx"
+                                        :class="idx % 2 === 0 ? 'bg-gray-50 dark:bg-gray-800' : ''"
+                                        class="hover:bg-blue-50 dark:hover:bg-blue-900 transition"
+                                    >
+                                        <td class="border px-3 py-2 text-center font-semibold text-gray-900 dark:text-gray-100">{{ row.row_number }}</td>
+                                        <td class="border px-3 py-2 font-medium text-gray-900 dark:text-gray-100">
+                                            <Input v-model="row.name" size="sm" class="w-full border rounded px-2 py-1" />
+                                        </td>
+                                        <td class="border px-3 py-2 font-medium text-gray-900 dark:text-gray-100">
+                                            <Input v-model="row.sku" size="sm" class="w-full border rounded px-2 py-1" />
+                                        </td>
+                                        <td class="border px-3 py-2 font-medium text-gray-900 dark:text-gray-100">
+                                            <Input v-model.number="row.price" type="number" size="sm" class="w-full border rounded px-2 py-1" />
+                                        </td>
+                                        <td class="border px-3 py-2 font-medium text-gray-900 dark:text-gray-100">
+                                            <Input v-model.number="row.cost_price" type="number" size="sm" class="w-full border rounded px-2 py-1" />
+                                        </td>
+                                        <td class="border px-3 py-2 font-medium text-gray-900 dark:text-gray-100">
+                                            <Input v-model.number="row.stock" type="number" size="sm" class="w-full border rounded px-2 py-1" />
+                                        </td>
+                                        <td class="border px-3 py-2 font-medium text-gray-900 dark:text-gray-100">
+                                            <Input v-model="row.unit" size="sm" class="w-full border rounded px-2 py-1" />
+                                        </td>
+                                        <td class="border px-3 py-2 text-red-600 dark:text-red-400 font-semibold">{{ row.error }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-4 flex gap-2 justify-end">
+                            <Button @click="submitErrorRowsImport" :disabled="importProcessing" class="bg-gradient-to-r from-yellow-400 to-yellow-600 dark:from-yellow-600 dark:to-yellow-800 text-white font-semibold px-4 py-2 rounded-lg shadow hover:from-yellow-500 hover:to-yellow-700 dark:hover:from-yellow-700 dark:hover:to-yellow-900 transition">
+                                <LoaderCircle v-if="importProcessing" class="h-4 w-4 animate-spin mr-2" />
+                                Import Ulang Baris Error
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button @click="submitImport" :disabled="importProcessing || !importFile || importErrorRows.length > 0" class="bg-gradient-to-r from-blue-500 to-blue-700 dark:from-blue-700 dark:to-blue-900 text-white font-semibold px-6 py-2 rounded-lg shadow hover:from-blue-600 hover:to-blue-800 dark:hover:from-blue-800 dark:hover:to-blue-950 transition">
+                        <LoaderCircle v-if="importProcessing" class="h-4 w-4 animate-spin mr-2" />
+                        Import
                     </Button>
                 </DialogFooter>
             </DialogContent>

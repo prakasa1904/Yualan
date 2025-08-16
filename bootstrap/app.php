@@ -35,6 +35,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'sales/ipaymu/notify',
             'subscription/notify',
+            '*/products/import',
+            '*/products/import/error-rows',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
