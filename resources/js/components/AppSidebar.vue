@@ -10,6 +10,8 @@ import { BookOpen, Folder, LayoutGrid, Tag, Package, Users, ShoppingBag, History
 
 import AppLogo from './AppLogo.vue';
 import { computed, onMounted, ref, watch } from 'vue';
+import { useSidebar } from '@/components/ui/sidebar/utils';
+
 // Theme switcher logic
 const isDark = ref(false);
 const toggleTheme = () => {
@@ -167,6 +169,8 @@ const isSubscriptionExpired = computed(() => {
     }
   
 });
+
+const { state } = useSidebar(); // state: ComputedRef<'expanded' | 'collapsed'>
 </script>
 
 <template>
@@ -175,10 +179,10 @@ const isSubscriptionExpired = computed(() => {
         variant="inset"
         class="h-screen shadow-lg border-r border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-900"
     >
-    <SidebarHeader class="py-4 px-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-center bg-white dark:bg-gray-900">
+        <SidebarHeader class="py-4 px-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-center bg-white dark:bg-gray-900">
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton size="lg" as-child>
+                    <SidebarMenuButton style="margin-left: -8px;" size="lg" as-child>
                         <Link :href="tenantSlug ? route('tenant.dashboard', { tenantSlug: tenantSlug }) : route('dashboard.default')">
                             <AppLogo class="w-10 h-10" />
                         </Link>
@@ -192,11 +196,11 @@ const isSubscriptionExpired = computed(() => {
         </SidebarContent>
 
         <SidebarFooter
-                    class="px-4 py-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+            class="px-4 py-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
         >
-
+            <!-- Hide subscription status when collapsed -->
             <div
-                v-if="userRole !== 'superadmin' && String(trialDays) !== 'INTERNAL'"
+                v-if="state !== undefined && state !== 'collapsed' && userRole !== 'superadmin' && String(trialDays) !== 'INTERNAL'"
                 class="p-3 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs text-gray-700 dark:text-gray-200"
             >
                 <h4 class="font-semibold text-sm mb-2 text-gray-800 dark:text-gray-100">Status Langganan</h4>
@@ -220,7 +224,7 @@ const isSubscriptionExpired = computed(() => {
                     </div>
                 </div>
             </div>
-            <div class="border-t pt-3 mt-2">
+            <div class=" pt-3 mt-2">
                 <NavFooter :items="footerNavItems" class="mb-2" />
                 <NavUser />
             </div>
