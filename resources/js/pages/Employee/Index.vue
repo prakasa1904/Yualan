@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { LoaderCircle, PlusCircle, Edit, Trash2, ChevronUp, ChevronDown, Search } from 'lucide-vue-next';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { format } from 'date-fns';
 
 interface Employee {
     id: string;
@@ -192,6 +193,15 @@ const applySearch = () => {
         });
     }, 300);
 };
+
+function formatDate(dateStr: string) {
+    if (!dateStr) return '';
+    try {
+        return format(new Date(dateStr), 'dd MMM yyyy HH:mm');
+    } catch {
+        return dateStr;
+    }
+}
 </script>
 
 <template>
@@ -287,7 +297,7 @@ const applySearch = () => {
                                 <span v-if="employee.role === 'admin'" class="px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs">Admin</span>
                                 <span v-else class="px-2 py-1 rounded bg-green-100 text-green-800 text-xs">Kasir</span>
                             </TableCell>
-                            <TableCell>{{ employee.created_at }}</TableCell>
+                            <TableCell>{{ formatDate(employee.created_at) }}</TableCell>
                             <TableCell>
                                 <span v-if="employee.deleted_at" class="px-2 py-1 rounded bg-red-100 text-red-800 text-xs">Terhapus</span>
                                 <span v-else class="px-2 py-1 rounded bg-gray-100 text-gray-800 text-xs">Aktif</span>
