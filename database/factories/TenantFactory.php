@@ -2,33 +2,50 @@
 
 namespace Database\Factories;
 
+use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Tenant>
- */
 class TenantFactory extends Factory
 {
     /**
-     * Define the model's default state.
+     * Nama model yang sesuai.
+     *
+     * @var string
+     */
+    protected $model = Tenant::class;
+
+    /**
+     * Definisikan state default dari model.
      *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
         return [
-            'id' => fake()->uuid(),
-            'name' => fake()->company(),
-            'slug' => fake()->slug(),
-            'phone' => fake()->phoneNumber(),
-            'address' => fake()->address(),
-            'owner_name' => fake()->name(),
-            'owner_email' => fake()->email(),
-            'subscription_status' => 'active',
-            'subscription_ends_at' => now()->addMonth(),
-            'ipaymu_api_key' => null,
-            'ipaymu_secret_key' => null,
-            'ipaymu_mode' => 'sandbox',
+            'id' => $this->faker->uuid(),
+            'name' => $this->faker->company(),
+            'slug' => Str::slug($this->faker->unique()->company()),
+            'invitation_code' => Str::upper(Str::random(8)),
+            'email' => $this->faker->unique()->safeEmail(),
+            'phone' => $this->faker->phoneNumber(),
+            'address' => $this->faker->address(),
+            'city' => $this->faker->city(),
+            'state' => $this->faker->state(),
+            'zip_code' => $this->faker->postcode(),
+            'country' => $this->faker->country(),
+            'business_type' => $this->faker->word(),
+            'is_active' => $this->faker->boolean(90),
+            'ipaymu_api_key' => $this->faker->uuid(),
+            'ipaymu_secret_key' => $this->faker->sha256(),
+            'ipaymu_mode' => $this->faker->randomElement(['sandbox', 'production']),
+            'pricing_plan_id' => $this->faker->uuid(),
+            'subscription_ends_at' => $this->faker->dateTimeBetween('now', '+1 year'),
+            'last_transaction_id' => $this->faker->uuid(),
+            'is_subscribed' => $this->faker->boolean(),
+            'owner_name' => $this->faker->name(),
+            'owner_email' => $this->faker->unique()->safeEmail(),
+            'subscription_status' => $this->faker->randomElement(['trial', 'active', 'inactive']),
         ];
     }
 }
