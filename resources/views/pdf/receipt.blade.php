@@ -7,14 +7,14 @@
         body {
             font-family: 'Inter', sans-serif; /* Fallback to generic sans-serif */
             margin: 0;
-            padding: 20px;
+            padding: 0px;
             color: #333;
             line-height: 1.6;
             font-size: 11px; /* Slightly larger base font for readability */
-            background-color: #f8f8f8; /* Light background for the page */
+            background-color: #ffffff; /* Light background for the page */
         }
         .container {
-            max-width: 550px; /* Slightly wider for better layout */
+            max-width: 100vw; /* Slightly wider for better layout */
             margin: 0 auto;
             background-color: #ffffff;
             border-radius: 8px; /* Slightly more rounded corners */
