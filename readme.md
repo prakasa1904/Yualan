@@ -29,7 +29,7 @@ Yualan hadir sebagai solusi POS yang cocok untuk bisnis ritel modern, UMKM, dan 
 
 ### � Sistem Transaksi
 - Pembuatan **Pesanan** dan pemrosesan cepat
-- Pilihan **Metode Pembayaran**: Tunai, QRIS, E-Wallet
+- Pilihan **Metode Pembayaran**: Tunai, QRIS, E-Wallet **(IPaymu & Midtrans)**
 - **Kwitansi** otomatis dan bisa dicetak
 - **Riwayat Pemesanan** lengkap dan dapat difilter
 
