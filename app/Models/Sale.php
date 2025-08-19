@@ -35,9 +35,15 @@ class Sale extends Model
     protected $fillable = [
         'id',
         'tenant_id',
-        'user_id', // Kasir yang melakukan penjualan
+        'user_id',
         'customer_id',
         'invoice_number',
+        'order_id',
+        'midtrans_transaction_id',
+        'payment_status',
+        'payment_type',
+        'gross_amount',
+        'midtrans_payload',
         'subtotal_amount',
         'discount_amount',
         'tax_amount',

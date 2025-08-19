@@ -22,6 +22,84 @@ use Illuminate\Support\Str; // Import Str for UUID in Sale model creation
 class SaleController extends Controller
 {
     /**
+     * Get Sale ID (UUID) by order_id for Midtrans redirect.
+     */
+    public function getSaleIdByOrderId(Request $request, string $tenantSlug, string $orderId)
+    {
+        $tenant = Tenant::where('slug', $tenantSlug)->firstOrFail();
+
+        // Find sale by order_id and tenant
+        $sale = \App\Models\Sale::where('tenant_id', $tenant->id)
+            ->where('invoice_number', $orderId)
+            ->first();
+
+        if ($sale) {
+            return response()->json(['saleId' => $sale->id]);
+        } else {
+            return response()->json(['saleId' => null], 404);
+        }
+    }
+
+    /**
+     * Endpoint for retrying Midtrans payment from receipt page.
+     * Returns new snapToken for the sale.
+     */
+    public function midtransRetry(Request $request, string $tenantSlug, Sale $sale)
+    {
+        $tenant = Tenant::where('slug', $tenantSlug)->firstOrFail();
+
+        // Ensure the logged-in user has access to this tenant and sale
+        if (Auth::user()->tenant_id !== $tenant->id || $sale->tenant_id !== $tenant->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Only allow retry if payment method is midtrans and status is pending/failed
+        if ($sale->payment_method !== 'midtrans' || !in_array($sale->status, ['pending', 'failed'])) {
+            return response()->json(['error' => 'Invalid sale for Midtrans retry'], 400);
+        }
+
+        // Prepare items for Snap
+        $items = [];
+        foreach ($sale->saleItems as $item) {
+            $items[] = [
+                'id' => $item->product_id,
+                'price' => $item->price,
+                'quantity' => $item->quantity,
+                'name' => $item->product->name,
+            ];
+        }
+
+        $customerDetails = [
+            'first_name' => $sale->customer ? $sale->customer->name : 'Guest',
+            'email' => $sale->customer ? $sale->customer->email : 'guest@example.com',
+            'phone' => $sale->customer ? $sale->customer->phone : '081234567890',
+        ];
+
+        $midtransService = new \App\Services\MidtransService($tenant);
+        $snapResponse = $midtransService->createSnapTransaction([
+            'order_id' => $sale->invoice_number,
+            'gross_amount' => $sale->total_amount,
+            'items' => $items,
+            'customer_details' => $customerDetails,
+            'callback_url' => route('sales.midtransNotify'),
+        ]);
+
+        // Optionally update sale with new transaction id/payload if needed
+        $sale->update([
+            'midtrans_transaction_id' => $snapResponse['transaction_id'] ?? null,
+            'midtrans_payload' => json_encode($snapResponse),
+            'payment_status' => 'pending',
+            'payment_type' => $snapResponse['payment_type'] ?? null,
+            'gross_amount' => $snapResponse['gross_amount'] ?? $sale->total_amount,
+        ]);
+
+        // Return snapToken to frontend
+        return response()->json([
+            'snapToken' => $snapResponse['token'] ?? null,
+        ]);
+    }
+
+    /**
      * Display a listing of the sales for the current tenant.
      */
     public function index(string $tenantSlug, Request $request): Response
@@ -92,6 +170,10 @@ class SaleController extends Controller
 
         // Check if iPaymu credentials are configured for the tenant
         $ipaymuConfigured = (bool)$tenant->ipaymu_api_key && (bool)$tenant->ipaymu_secret_key;
+        $midtransConfigured = !empty($tenant->midtrans_server_key) && !empty($tenant->midtrans_client_key) && !empty($tenant->midtrans_merchant_id);
+
+        // Kirim client key ke frontend agar Snap.js bisa custom UI
+        $midtransClientKey = $tenant->midtrans_client_key ?? '';
 
         return Inertia::render('Cashier/Order', [
             'products' => $products,
@@ -100,6 +182,8 @@ class SaleController extends Controller
             'tenantSlug' => $tenantSlug,
             'tenantName' => $tenant->name,
             'ipaymuConfigured' => $ipaymuConfigured,
+            'midtransConfigured' => $midtransConfigured,
+            'midtransClientKey' => $midtransClientKey,
         ]);
     }
 
@@ -123,7 +207,7 @@ class SaleController extends Controller
             'customer_id' => ['nullable', 'string', 'exists:customers,id'],
             'discount_amount' => ['required', 'numeric', 'min:0'],
             'tax_rate' => ['required', 'numeric', 'min:0', 'max:100'],
-            'payment_method' => ['required', 'string', 'in:cash,ipaymu'],
+            'payment_method' => ['required', 'string', 'in:cash,ipaymu,midtrans'],
             'paid_amount' => ['required', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string', 'max:500'],
         ]);
@@ -211,13 +295,253 @@ class SaleController extends Controller
 
         // If payment method is iPaymu, initiate payment
         if ($request->payment_method === 'ipaymu') {
-            // Changed return type to Inertia::render to pass the URL to frontend
             return $this->initiateIpaymuPayment($sale, $tenant);
+        }
+
+        // If payment method is midtrans, initiate payment and return snapToken for Snap.js
+        if ($request->payment_method === 'midtrans') {
+                $midtransService = new \App\Services\MidtransService($tenant);
+                // Build item details for Midtrans, including discount and tax as separate items
+                $items = $sale->saleItems->map(function($item) {
+                    return [
+                        'id' => $item->product_id,
+                        'price' => $item->price,
+                        'quantity' => $item->quantity,
+                        'name' => $item->product->name,
+                    ];
+                })->toArray();
+                // Tambahkan diskon sebagai item negatif jika ada
+                if ($sale->discount_amount > 0) {
+                    $items[] = [
+                        'id' => 'DISCOUNT',
+                        'price' => -$sale->discount_amount,
+                        'quantity' => 1,
+                        'name' => 'Diskon',
+                    ];
+                }
+                // Tambahkan pajak sebagai item positif jika ada
+                if ($sale->tax_amount > 0) {
+                    $items[] = [
+                        'id' => 'TAX',
+                        'price' => $sale->tax_amount,
+                        'quantity' => 1,
+                        'name' => 'Pajak',
+                    ];
+                }
+                $snapResponse = $midtransService->createSnapTransaction([
+                    'order_id' => $sale->invoice_number,
+                    'gross_amount' => $sale->total_amount,
+                    'items' => $items,
+                    'customer_details' => [
+                        'first_name' => $sale->customer ? $sale->customer->name : 'Guest',
+                        'email' => $sale->customer ? $sale->customer->email : 'guest@example.com',
+                        'phone' => $sale->customer ? $sale->customer->phone : '081234567890',
+                    ],
+                    'callback_url' => route('sales.midtransNotify'),
+                ]);
+
+                // Simpan data Midtrans ke sale
+                $sale->update([
+                    'order_id' => $sale->invoice_number,
+                    'midtrans_transaction_id' => $snapResponse['transaction_id'] ?? null,
+                    'midtrans_payload' => json_encode($snapResponse),
+                    'payment_status' => 'pending',
+                    'payment_type' => $snapResponse['payment_type'] ?? null,
+                    'gross_amount' => $snapResponse['gross_amount'] ?? $sale->total_amount,
+                ]);
+
+                // Simpan ke payments
+                Payment::create([
+                    'id' => Str::uuid(),
+                    'tenant_id' => $tenant->id,
+                    'sale_id' => $sale->id,
+                    'payment_method' => 'midtrans',
+                    'amount' => $sale->total_amount,
+                    'currency' => 'IDR',
+                    'status' => 'pending',
+                    'transaction_id' => $snapResponse['transaction_id'] ?? null,
+                    'gateway_response' => $snapResponse,
+                    'notes' => 'Pembayaran Midtrans Snap diinisiasi',
+                ]);
+
+                // Return snapToken to frontend for Snap.js
+                return Inertia::render('Cashier/Order', [
+                    'products' => Product::where('tenant_id', $tenant->id)->with('category')->get(),
+                    'categories' => Category::where('tenant_id', $tenant->id)->get(),
+                    'customers' => Customer::where('tenant_id', $tenant->id)->get(),
+                    'tenantSlug' => $tenantSlug,
+                    'tenantName' => $tenant->name,
+                    'ipaymuConfigured' => (bool)$tenant->ipaymu_api_key && (bool)$tenant->ipaymu_secret_key,
+                    'midtransConfigured' => !empty($tenant->midtrans_server_key) && !empty($tenant->midtrans_client_key) && !empty($tenant->midtrans_merchant_id),
+                    'snapToken' => $snapResponse['token'] ?? null,
+                ]);
         }
 
         // For cash payments, redirect to receipt page
         return redirect()->route('sales.receipt', ['tenantSlug' => $tenantSlug, 'sale' => $sale->id])
             ->with('success', 'Penjualan berhasil diproses!');
+
+
+    }
+    /**
+     * Initiate Midtrans payment (Snap API).
+     */
+    protected function initiateMidtransPayment(Sale $sale, Tenant $tenant): Response|RedirectResponse
+    {
+        try {
+            // Pastikan ada MidtransService dengan tenant
+            $midtransService = new \App\Services\MidtransService($tenant);
+
+            // Prepare items for Snap
+            $items = [];
+            foreach ($sale->saleItems as $item) {
+                $items[] = [
+                    'id' => $item->product_id,
+                    'price' => $item->price,
+                    'quantity' => $item->quantity,
+                    'name' => $item->product->name,
+                ];
+            }
+
+            $customerDetails = [
+                'first_name' => $sale->customer ? $sale->customer->name : 'Guest',
+                'email' => $sale->customer ? $sale->customer->email : 'guest@example.com',
+                'phone' => $sale->customer ? $sale->customer->phone : '081234567890',
+            ];
+
+            // Call MidtransService to create Snap transaction
+            $snapResponse = $midtransService->createSnapTransaction([
+                'order_id' => $sale->invoice_number,
+                'gross_amount' => $sale->total_amount,
+                'items' => $items,
+                'customer_details' => $customerDetails,
+                'callback_url' => route('sales.midtransNotify'),
+            ]);
+
+            // Simpan data Midtrans ke sale
+            $sale->update([
+                'order_id' => $sale->invoice_number,
+                'midtrans_transaction_id' => $snapResponse['transaction_id'] ?? null,
+                'midtrans_payload' => json_encode($snapResponse),
+                'payment_status' => 'pending',
+                'payment_type' => $snapResponse['payment_type'] ?? null,
+                'gross_amount' => $snapResponse['gross_amount'] ?? $sale->total_amount,
+            ]);
+
+            // Simpan ke payments
+            Payment::create([
+                'id' => Str::uuid(),
+                'tenant_id' => $tenant->id,
+                'sale_id' => $sale->id,
+                'payment_method' => 'midtrans',
+                'amount' => $sale->total_amount,
+                'currency' => 'IDR',
+                'status' => 'pending',
+                'transaction_id' => $snapResponse['transaction_id'] ?? null,
+                'gateway_response' => $snapResponse,
+                'notes' => 'Pembayaran Midtrans Snap diinisiasi',
+            ]);
+
+            // Redirect ke Snap URL
+            if (isset($snapResponse['redirect_url'])) {
+                return redirect()->away($snapResponse['redirect_url']);
+            }
+            return redirect()->route('sales.order', ['tenantSlug' => $tenant->slug])
+                ->with('error', 'URL pembayaran Midtrans tidak ditemukan.');
+        } catch (\Exception $e) {
+            Log::error('Midtrans Service Error: ' . $e->getMessage());
+            return redirect()->route('sales.order', ['tenantSlug' => $tenant->slug])
+                ->with('error', 'Terjadi kesalahan saat menginisiasi pembayaran Midtrans: ' . $e->getMessage());
+        }
+    }
+    /**
+     * Handle Midtrans payment notification (callback).
+     * POST dari Midtrans ke endpoint ini.
+     */
+    public function midtransNotify(Request $request)
+    {
+        Log::info('Midtrans Notify Callback Received:', $request->all());
+
+        $orderId = $request->input('order_id');
+        $transactionStatus = $request->input('transaction_status');
+        $transactionId = $request->input('transaction_id');
+        $grossAmount = $request->input('gross_amount');
+        $paymentType = $request->input('payment_type');
+        $signatureKey = $request->input('signature_key');
+
+        // Cari sale berdasarkan order_id
+        $sale = Sale::where('order_id', $orderId)->first();
+        if (!$sale) {
+            Log::warning('Midtrans Notify: Sale not found for order_id: ' . $orderId);
+            return response()->json(['message' => 'Sale not found'], 404);
+        }
+
+        // Verifikasi signature (opsional, bisa tambahkan di MidtransService)
+        // ...implementasi signature check jika diperlukan...
+
+        // Update status pembayaran
+        if ($transactionStatus === 'capture' || $transactionStatus === 'settlement') {
+            $sale->update([
+                'status' => 'completed',
+                'payment_status' => $transactionStatus,
+                'midtrans_transaction_id' => $transactionId,
+                'gross_amount' => $grossAmount,
+                'payment_type' => $paymentType,
+                'midtrans_payload' => json_encode($request->all()),
+            ]);
+
+            // Update Payment record
+            $payment = Payment::firstOrNew(['transaction_id' => $transactionId, 'sale_id' => $sale->id]);
+            $payment->fill([
+                'tenant_id' => $sale->tenant_id,
+                'payment_method' => 'midtrans',
+                'amount' => $grossAmount,
+                'currency' => 'IDR',
+                'status' => 'completed',
+                'gateway_response' => $request->all(),
+                'notes' => 'Pembayaran Midtrans (callback)',
+            ])->save();
+        } elseif ($transactionStatus === 'pending') {
+            $sale->update([
+                'status' => 'pending',
+                'payment_status' => $transactionStatus,
+                'midtrans_transaction_id' => $transactionId,
+                'gross_amount' => $grossAmount,
+                'payment_type' => $paymentType,
+                'midtrans_payload' => json_encode($request->all()),
+            ]);
+            $payment = Payment::firstOrNew(['transaction_id' => $transactionId, 'sale_id' => $sale->id]);
+            $payment->fill([
+                'tenant_id' => $sale->tenant_id,
+                'payment_method' => 'midtrans',
+                'amount' => $grossAmount,
+                'currency' => 'IDR',
+                'status' => 'pending',
+                'gateway_response' => $request->all(),
+                'notes' => 'Pembayaran Midtrans pending (callback)',
+            ])->save();
+        } elseif ($transactionStatus === 'cancel' || $transactionStatus === 'deny' || $transactionStatus === 'expire') {
+            $sale->update([
+                'status' => 'failed',
+                'payment_status' => $transactionStatus,
+                'midtrans_transaction_id' => $transactionId,
+                'gross_amount' => $grossAmount,
+                'payment_type' => $paymentType,
+                'midtrans_payload' => json_encode($request->all()),
+            ]);
+            $payment = Payment::firstOrNew(['transaction_id' => $transactionId, 'sale_id' => $sale->id]);
+            $payment->fill([
+                'tenant_id' => $sale->tenant_id,
+                'payment_method' => 'midtrans',
+                'amount' => $grossAmount,
+                'currency' => 'IDR',
+                'status' => 'failed',
+                'gateway_response' => $request->all(),
+                'notes' => 'Pembayaran Midtrans gagal/cancel/expire (callback)',
+            ])->save();
+        }
+
+        return response()->json(['message' => 'Midtrans notification processed'], 200);
     }
 
     /**
@@ -296,7 +620,7 @@ class SaleController extends Controller
                         'transactionId' => $response['Data']['transactionId'] ?? 'not_found',
                         'trx_id' => $response['Data']['trx_id'] ?? 'not_found',
                         'id' => $response['Data']['id'] ?? 'not_found',
-                    ]
+                    ],
                 ]);
 
                 // Redirect langsung ke halaman pembayaran iPaymu
@@ -584,7 +908,8 @@ class SaleController extends Controller
                         'status' => 'completed',
                         'gateway_response' => $checkStatusResponse,
                         'notes' => 'Pembayaran iPaymu (IPN)',
-                    ])->save();
+                    ]);
+                    $payment->save();
                     Log::info('iPaymu Notify: Payment record for Sale ID ' . $sale->id . ' updated/created as completed.');
                 }
             } elseif ($ipaymuActualStatus === 'Gagal') {
@@ -604,7 +929,8 @@ class SaleController extends Controller
                         'status' => 'failed',
                         'gateway_response' => $checkStatusResponse,
                         'notes' => 'Pembayaran iPaymu gagal (IPN)',
-                    ])->save();
+                    ]);
+                    $payment->save();
                 }
             } elseif ($ipaymuActualStatus === 'Pending') {
                 if ($sale->status !== 'pending' && $sale->status !== 'completed') {
@@ -623,7 +949,8 @@ class SaleController extends Controller
                         'status' => 'pending',
                         'gateway_response' => $checkStatusResponse,
                         'notes' => 'Pembayaran iPaymu pending (IPN)',
-                    ])->save();
+                    ]);
+                    $payment->save();
                 }
             } else {
                 Log::warning('iPaymu Notify: Unknown status from checkTransaction for Sale ID ' . $sale->id . ': ' . $ipaymuActualStatus);

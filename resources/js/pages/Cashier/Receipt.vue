@@ -1,4 +1,55 @@
 <script setup lang="ts">
+// TypeScript: declare window.snap for Snap.js
+declare global {
+    interface Window {
+        snap?: any;
+    }
+}
+// Show Midtrans retry button if payment_method is midtrans and status is pending/failed
+const showMidtransRetryButton = computed(() => {
+    return props.sale.payment_method === 'midtrans' &&
+        (props.sale.status === 'pending' || props.sale.status === 'failed');
+});
+
+// Retry Midtrans payment: fetch snapToken from backend, then call Snap.js
+const retryMidtransPayment = () => {
+    // Fetch snapToken from backend
+    fetch(route('sales.midtransRetry', { tenantSlug: props.tenantSlug, sale: props.sale.id }), {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin',
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.snapToken) {
+                // Call Snap.js
+                if (window.snap) {
+                    window.snap.pay(data.snapToken, {
+                        onSuccess: function(result: any) {
+                            window.location.reload();
+                        },
+                        onPending: function(result: any) {
+                            window.location.reload();
+                        },
+                        onError: function(result: any) {
+                            window.location.reload();
+                        },
+                        onClose: function() {}
+                    });
+                } else {
+                    alert('Midtrans Snap.js belum dimuat. Silakan refresh halaman.');
+                }
+            } else {
+                alert('Gagal mendapatkan Snap Token dari server.');
+            }
+        })
+        .catch(() => {
+            alert('Gagal memulai pembayaran ulang Midtrans.');
+        });
+};
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, usePage, Link, router } from '@inertiajs/vue3'; // Import router
@@ -144,6 +195,9 @@ const showPayNowButton = computed(() => {
                 <div class="flex gap-2">
                     <Button v-if="showPayNowButton" @click="reinitiateIpaymuPayment" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white">
                         <Wallet class="h-4 w-4" /> Bayar Sekarang (iPaymu)
+                    </Button>
+                    <Button v-if="showMidtransRetryButton" @click="retryMidtransPayment" class="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white">
+                        <Wallet class="h-4 w-4" /> Bayar Ulang (Midtrans)
                     </Button>
                     <Button @click="printReceipt" class="flex items-center gap-2">
                         <Printer class="h-4 w-4" /> Cetak Resi (PDF)

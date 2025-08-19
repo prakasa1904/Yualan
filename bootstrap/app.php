@@ -37,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'subscription/notify',
             '*/products/import',
             '*/products/import/error-rows',
+            'midtrans/callback'
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

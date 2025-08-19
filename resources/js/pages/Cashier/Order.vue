@@ -21,6 +21,7 @@ interface Product {
     unit: string | null;
     category_id: string | null;
     category?: { id: string; name: string };
+    image?: string | null; // Add image property
 }
 
 interface Customer {
@@ -50,9 +51,18 @@ const props = defineProps<{
     customers: Customer[];
     tenantSlug: string;
     tenantName: string;
-    ipaymuConfigured: boolean; // New prop for iPaymu configuration
-    ipaymuRedirectUrl?: string; // New prop for iPaymu redirect URL
+    ipaymuConfigured: boolean;
+    ipaymuRedirectUrl?: string;
+    midtransConfigured: boolean;
+    midtransClientKey?: string;
 }>();
+
+// TypeScript: declare window.snap for Snap.js
+declare global {
+    interface Window {
+        snap?: any;
+    }
+}
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -189,6 +199,93 @@ watch(() => form.payment_method, (newMethod) => {
 
 
 // Submit sale
+
+// Load Snap.js script for Midtrans
+onMounted(() => {
+    if (props.midtransConfigured) {
+        if (!document.getElementById('midtrans-snapjs')) {
+            // Ambil client key dari props jika ada, jika tidak fetch dari backend
+            let clientKey = props.midtransClientKey || '';
+            if (!clientKey) {
+                // Fetch client key dari backend via AJAX
+                fetch(route('tenant.midtransClientKey', { tenantSlug: props.tenantSlug }))
+                    .then(res => res.json())
+                    .then(data => {
+                        clientKey = data.clientKey || '';
+                        const script = document.createElement('script');
+                        script.id = 'midtrans-snapjs';
+                        script.type = 'text/javascript';
+                        script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
+                        script.setAttribute('data-client-key', clientKey);
+                        document.body.appendChild(script);
+                    });
+            } else {
+                const script = document.createElement('script');
+                script.id = 'midtrans-snapjs';
+                script.type = 'text/javascript';
+                script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
+                script.setAttribute('data-client-key', clientKey);
+                document.body.appendChild(script);
+            }
+        }
+    }
+});
+
+const handleMidtransPay = (snapToken: any) => {
+    if (window.snap && snapToken) {
+        // Fungsi untuk redirect ke receipt dengan sales.id
+        const redirectToReceiptByOrderId = (orderId: string) => {
+            if (!orderId) {
+                alert('Order ID tidak ditemukan di response Midtrans.');
+                return;
+            }
+            // Fetch sale_id dari backend
+            fetch(route('sales.getSaleIdByOrderId', { tenantSlug: props.tenantSlug, orderId }), {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.saleId) {
+                        window.location.href = route('sales.receipt', { tenantSlug: props.tenantSlug, sale: data.saleId });
+                    } else {
+                        alert('Tidak dapat menemukan ID penjualan (UUID) dari order_id.');
+                    }
+                })
+                .catch(() => {
+                    alert('Gagal mengambil sales.id dari order_id.');
+                });
+        };
+        window.snap.pay(snapToken, {
+            onSuccess: function(result: any) {
+                if (result && result.order_id) {
+                    redirectToReceiptByOrderId(result.order_id);
+                } else {
+                    alert('Pembayaran berhasil, tetapi order_id tidak ditemukan.');
+                }
+            },
+            onPending: function(result: any) {
+                if (result && result.order_id) {
+                    redirectToReceiptByOrderId(result.order_id);
+                } else {
+                    alert('Pembayaran pending, tetapi order_id tidak ditemukan.');
+                }
+            },
+            onError: function(result: any) {
+                if (result && result.order_id) {
+                    redirectToReceiptByOrderId(result.order_id);
+                } else {
+                    alert('Pembayaran gagal, tetapi order_id tidak ditemukan.');
+                }
+            },
+            onClose: function() {
+                // Optionally handle close event
+            }
+        });
+    }
+};
+
 const submitSale = () => {
     if (cartItems.value.length === 0) {
         alert('Keranjang belanja kosong. Tambahkan produk terlebih dahulu.');
@@ -209,14 +306,19 @@ const submitSale = () => {
 
     form.post(route('sales.store', { tenantSlug: props.tenantSlug }), {
         onSuccess: (page) => {
-            if (form.payment_method === 'cash') {
+            if (form.payment_method === 'midtrans' && page.props.snapToken) {
+                handleMidtransPay(page.props.snapToken);
+            } else if (form.payment_method === 'cash') {
                 cartItems.value = [];
                 form.reset();
                 selectedCustomer.value = null;
                 alert('Pesanan berhasil dibuat!');
             } else if (form.payment_method === 'ipaymu' && page.props.ipaymuRedirectUrl) {
-                // If iPaymu and redirect URL is provided, navigate away
-                window.location.href = page.props.ipaymuRedirectUrl;
+                if (typeof page.props.ipaymuRedirectUrl === 'string') {
+                    window.location.href = page.props.ipaymuRedirectUrl;
+                } else {
+                    alert('URL redirect iPaymu tidak valid.');
+                }
             }
         },
         onError: (errors) => {
@@ -238,10 +340,10 @@ onMounted(() => {
 
     // Check for flash messages on mount
     const pageProps = usePage().props;
-    if (pageProps.flash && pageProps.flash.success) {
+    if (pageProps.flash && typeof pageProps.flash === 'object' && 'success' in pageProps.flash && pageProps.flash.success) {
         alert(pageProps.flash.success);
     }
-    if (pageProps.flash && pageProps.flash.error) {
+    if (pageProps.flash && typeof pageProps.flash === 'object' && 'error' in pageProps.flash && pageProps.flash.error) {
         alert(pageProps.flash.error);
     }
 });
@@ -418,6 +520,10 @@ watch(totalAmount, (newTotal) => {
                                 <SelectItem value="ipaymu" :disabled="!ipaymuConfigured">
                                     iPaymu
                                     <span v-if="!ipaymuConfigured" class="text-xs text-red-500 ml-2">(Belum dikonfigurasi)</span>
+                                </SelectItem>
+                                <SelectItem value="midtrans" :disabled="!midtransConfigured">
+                                    Midtrans
+                                    <span v-if="!midtransConfigured" class="text-xs text-red-500 ml-2">(Belum dikonfigurasi)</span>
                                 </SelectItem>
                             </SelectContent>
                         </Select>

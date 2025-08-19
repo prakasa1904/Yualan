@@ -52,6 +52,10 @@ class Tenant extends Model
         'subscription_ends_at',
         'last_transaction_id',
         'is_subscribed',
+        'midtrans_server_key',
+        'midtrans_client_key',
+        'midtrans_merchant_id',
+    'midtrans_is_production',
     ];
 
     /**

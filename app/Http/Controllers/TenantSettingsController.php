@@ -31,7 +31,11 @@ class TenantSettingsController extends Controller
                 'ipaymu_api_key' => $tenant->ipaymu_api_key,
                 'ipaymu_secret_key' => $tenant->ipaymu_secret_key,
                 'ipaymu_mode' => $tenant->ipaymu_mode,
-                'invitation_code' => $tenant->invitation_code, // Pass the invitation code
+                'invitation_code' => $tenant->invitation_code,
+                'midtrans_server_key' => $tenant->midtrans_server_key,
+                'midtrans_client_key' => $tenant->midtrans_client_key,
+                'midtrans_merchant_id' => $tenant->midtrans_merchant_id,
+                'midtrans_is_production' => $tenant->midtrans_is_production,
             ],
             'tenantSlug' => $tenantSlug,
         ]);
@@ -56,6 +60,10 @@ class TenantSettingsController extends Controller
             'ipaymu_mode' => ['required', Rule::in(['production', 'sandbox'])],
             // Validate uniqueness of invitation_code, ignoring the current tenant's ID
             'invitation_code' => ['nullable', 'string', 'max:255', Rule::unique('tenants')->ignore($tenant->id)],
+            'midtrans_server_key' => ['nullable', 'string', 'max:255'],
+            'midtrans_client_key' => ['nullable', 'string', 'max:255'],
+            'midtrans_merchant_id' => ['nullable', 'string', 'max:255'],
+            'midtrans_is_production' => ['required', 'boolean'],
         ]);
 
         $tenant->update([
@@ -64,9 +72,13 @@ class TenantSettingsController extends Controller
             'ipaymu_secret_key' => $request->ipaymu_secret_key,
             'ipaymu_mode' => $request->ipaymu_mode,
             'invitation_code' => $request->invitation_code, // Update the invitation code
+            'midtrans_server_key' => $request->midtrans_server_key,
+            'midtrans_client_key' => $request->midtrans_client_key,
+            'midtrans_merchant_id' => $request->midtrans_merchant_id,
+            'midtrans_is_production' => $request->midtrans_is_production,
         ]);
 
-        return back()->with('success', 'Informasi tenant berhasil diperbarui.');
+    return redirect()->route('tenant.settings.info', ['tenantSlug' => $tenantSlug])->with('success', 'Informasi tenant berhasil diperbarui.');
     }
 
     /**

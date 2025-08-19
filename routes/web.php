@@ -23,6 +23,7 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\SaasInvoiceController;
 use App\Http\Controllers\SaasInvoiceHistoryController;
 use App\Http\Controllers\TenantController;
+use App\Http\Controllers\MidtransController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Models\PricingPlan;
@@ -45,6 +46,9 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
+// Midtrans Payment
+Route::post('/{tenantSlug}/midtrans/pay', [MidtransController::class, 'pay'])->name('midtrans.pay');
+Route::post('/midtrans/callback', [SaleController::class, 'midtransNotify'])->name('midtrans.callback');
 // Informational pages (FAQ, Terms, Refund)
 Route::get('faq', function () {
     return Inertia::render('Faq');
@@ -276,6 +280,12 @@ Route::middleware('auth')->group(function () {
 // Webhook notification route - must be outside auth and CSRF protection
 Route::post('/subscription/notify', [\App\Http\Controllers\SubscriptionController::class, 'notify'])->name('subscription.notify');
 
+
+// Rute notify Midtrans Snap (webhook) - harus global
+Route::post('/sales/midtrans/notify', [SaleController::class, 'midtransNotify'])->name('sales.midtransNotify');
+// Get Sale ID by order_id for Midtrans redirect
+Route::middleware(['auth', 'tenant.access'])->get('sales/{tenantSlug}/get-sale-id/{orderId}', [\App\Http\Controllers\SaleController::class, 'getSaleIdByOrderId'])->name('sales.getSaleIdByOrderId');
+
 // Rute notify iPaymu (webhook) - DIPINDAHKAN KELUAR DARI GRUP tenantSlug
 // Ini harus dapat diakses secara global oleh iPaymu
 Route::post('/sales/ipaymu/notify', [SaleController::class, 'ipaymuNotify'])->name('sales.ipaymuNotify');
@@ -302,6 +312,7 @@ Route::middleware(['auth', 'tenant.access'])->group(function () {
         ->name('reports.payments');
     Route::get('/{tenantSlug}/reports/product-margin', [ReportController::class, 'productMargin'])->name('reports.product-margin');
 });
+
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
