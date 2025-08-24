@@ -302,8 +302,33 @@ const submitSale = () => {
     // Adjust paid_amount for iPaymu before submission
     if (form.payment_method === 'ipaymu') {
         form.paid_amount = totalAmount.value;
+
+        // Kirim request manual pakai fetch agar bisa handle response JSON
+        fetch(route('sales.store', { tenantSlug: props.tenantSlug }), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(form.data()),
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.payment_url) {
+                window.location.href = data.payment_url;
+            } else {
+                alert(data.error || 'Gagal mendapatkan URL pembayaran iPaymu.');
+            }
+        })
+        .catch(() => {
+            alert('Terjadi kesalahan saat menginisiasi pembayaran iPaymu.');
+        });
+        return;
     }
 
+    // Untuk cash dan midtrans tetap pakai form.post
     form.post(route('sales.store', { tenantSlug: props.tenantSlug }), {
         onSuccess: (page) => {
             if (form.payment_method === 'midtrans' && page.props.snapToken) {
@@ -313,19 +338,13 @@ const submitSale = () => {
                 form.reset();
                 selectedCustomer.value = null;
                 alert('Pesanan berhasil dibuat!');
-            } else if (form.payment_method === 'ipaymu' && page.props.ipaymuRedirectUrl) {
-                if (typeof page.props.ipaymuRedirectUrl === 'string') {
-                    window.location.href = page.props.ipaymuRedirectUrl;
-                } else {
-                    alert('URL redirect iPaymu tidak valid.');
-                }
             }
         },
         onError: (errors) => {
-            console.error("Submission errors:", errors);
-            let errorMessage = "Terjadi kesalahan saat memproses pesanan.";
-            if (errors.items) errorMessage += "\n" + errors.items;
-            if (errors.paid_amount) errorMessage += "\n" + errors.paid_amount;
+            console.error('Submission errors:', errors);
+            let errorMessage = 'Terjadi kesalahan saat memproses pesanan.';
+            if (errors.items) errorMessage += '\n' + errors.items;
+            if (errors.paid_amount) errorMessage += '\n' + errors.paid_amount;
             alert(errorMessage);
         },
         onFinish: () => {
