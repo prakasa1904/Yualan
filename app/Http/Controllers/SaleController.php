@@ -623,37 +623,53 @@ class SaleController extends Controller
                     ],
                 ]);
 
-                // Redirect langsung ke halaman pembayaran iPaymu
-                    if (isset($response['Data']['Url']) && !empty($response['Data']['Url'])) {
-                        Log::info('Redirecting to iPaymu payment page (frontend should handle redirect)', [
-                            'sale_id' => $sale->id,
-                            'payment_url' => $response['Data']['Url']
-                        ]);
-                        // Kembalikan response JSON agar frontend bisa melakukan window.location.href
-                        return response()->json([
-                            'success' => true,
-                            'payment_url' => $response['Data']['Url'],
-                            'sale_id' => $sale->id
-                        ]);
-                    } else {
-                        Log::error('iPaymu payment URL not found in response', [
-                            'response' => $response,
-                            'available_keys' => array_keys($response['Data'] ?? [])
-                        ]);
-                        return response()->json([
-                            'success' => false,
-                            'error' => 'URL pembayaran iPaymu tidak ditemukan dalam response.'
-                        ], 400);
-                    }
+                // Kembalikan response JSON agar frontend bisa melakukan window.location.href
+                return response()->json([
+                    'success' => true,
+                    'payment_url' => $response['Data']['Url'] ?? null,
+                    'sale_id' => $sale->id
+                ]);
             } else {
                 Log::error('iPaymu API Error: ' . json_encode($response));
-                return redirect()->route('sales.order', ['tenantSlug' => $tenant->slug])
-                    ->with('error', 'Pembayaran iPaymu gagal diinisiasi: ' . (isset($response['Message']) ? $response['Message'] : 'Terjadi kesalahan.'));
+                // Keterangan khusus untuk error tertentu
+                $additionalInfo = null;
+                if (($response['Message'] ?? '') === 'Invalid IP') {
+                    $additionalInfo = 'Update allowed IP address Anda di dashboard iPaymu dengan IP address sistem POS ini.';
+                } elseif (($response['Message'] ?? '') === 'Invalid Domain') {
+                    $additionalInfo = 'Update allowed domain address Anda di dashboard iPaymu dengan domain address sistem POS ini.';
+                }
+                return response()->json([
+                    'success' => false,
+                    'error' => $response['Message'] ?? 'Pembayaran iPaymu gagal diinisiasi.',
+                    'status' => $response['Status'] ?? 400,
+                    'data' => $response['Data'] ?? null,
+                    'info' => $additionalInfo
+                ], 400);
             }
         } catch (\Exception $e) {
             Log::error('iPaymu Service Error: ' . $e->getMessage());
-            return redirect()->route('sales.order', ['tenantSlug' => $tenant->slug])
-                ->with('error', 'Terjadi kesalahan saat menginisiasi pembayaran iPaymu: ' . $e->getMessage());
+            // Coba parse response error dari iPaymu jika ada JSON di message
+            $errorMsg = $e->getMessage();
+            $additionalInfo = null;
+            $parsed = null;
+            if (preg_match('/\{\"Status\":400,.*\}/', $errorMsg, $matches)) {
+                try {
+                    $parsed = json_decode(str_replace('\"', '"', $matches[0]), true);
+                } catch (\Exception $ex) {}
+            }
+            if ($parsed && isset($parsed['Message'])) {
+                if ($parsed['Message'] === 'Invalid IP') {
+                    $additionalInfo = 'Update allowed IP address Anda di dashboard iPaymu dengan IP address sistem POS ini.';
+                } elseif ($parsed['Message'] === 'Invalid Domain') {
+                    $additionalInfo = 'Update allowed domain address Anda di dashboard iPaymu dengan domain address sistem POS ini.';
+                }
+            }
+            return response()->json([
+                'success' => false,
+                'error' => $errorMsg,
+                'status' => 500,
+                'info' => $additionalInfo
+            ], 500);
         }
     }
 

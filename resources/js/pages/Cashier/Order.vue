@@ -3,6 +3,8 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, usePage, useForm, Link, router } from '@inertiajs/vue3';
 import { computed, ref, watch, onMounted } from 'vue';
+// Modal error dialog state
+const errorDialog = ref<{ show: boolean, message: string, info?: string } | null>(null);
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -302,8 +304,6 @@ const submitSale = () => {
     // Adjust paid_amount for iPaymu before submission
     if (form.payment_method === 'ipaymu') {
         form.paid_amount = totalAmount.value;
-
-        // Kirim request manual pakai fetch agar bisa handle response JSON
         fetch(route('sales.store', { tenantSlug: props.tenantSlug }), {
             method: 'POST',
             headers: {
@@ -314,16 +314,26 @@ const submitSale = () => {
             credentials: 'same-origin',
             body: JSON.stringify(form.data()),
         })
-        .then(res => res.json())
-        .then(data => {
+        .then(async res => {
+            let data;
+            try {
+                data = await res.json();
+            } catch (e) {
+                errorDialog.value = { show: true, message: 'Gagal parsing response dari server.' };
+                return;
+            }
             if (data.success && data.payment_url) {
                 window.location.href = data.payment_url;
             } else {
-                alert(data.error || 'Gagal mendapatkan URL pembayaran iPaymu.');
+                errorDialog.value = {
+                    show: true,
+                    message: data.error || 'Gagal mendapatkan URL pembayaran iPaymu.',
+                    info: data.info || ''
+                };
             }
         })
-        .catch(() => {
-            alert('Terjadi kesalahan saat menginisiasi pembayaran iPaymu.');
+        .catch((err) => {
+            errorDialog.value = { show: true, message: 'Terjadi kesalahan saat menginisiasi pembayaran iPaymu.' };
         });
         return;
     }
@@ -380,6 +390,29 @@ watch(totalAmount, (newTotal) => {
     <Head title="Pemesanan" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
+        <!-- Error Modal Dialog -->
+        <transition name="fade">
+            <div v-if="errorDialog && errorDialog.show" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-5 backdrop-blur-sm">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 max-w-md w-full text-center relative animate-fadeIn">
+                <button @click="errorDialog.show = false" class="absolute top-3 right-3 text-gray-400 hover:text-red-500 text-2xl font-bold">&times;</button>
+                <div class="flex flex-col items-center mb-4">
+                    <svg class="w-12 h-12 text-red-500 mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12A9 9 0 1 1 3 12a9 9 0 0 1 18 0z"/></svg>
+                    <h3 class="text-2xl font-bold text-red-600">Terjadi Kesalahan</h3>
+                </div>
+                <p class="mb-4 text-gray-800 dark:text-gray-200 whitespace-pre-line">{{ errorDialog.message }}</p>
+                <div v-if="errorDialog.info" class="mb-6">
+                    <div class="flex items-center justify-center gap-2 bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-200 rounded px-4 py-3 border border-blue-200 dark:border-blue-800">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></svg>
+                        <div class="text-left">
+                            <div class="font-semibold text-blue-700 dark:text-blue-200 mb-1">Additional Info</div>
+                            <div class="text-sm leading-relaxed">{{ errorDialog.info }}</div>
+                        </div>
+                    </div>
+                </div>
+                <button @click="errorDialog.show = false" class="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition font-semibold shadow">Tutup</button>
+            </div>
+        </div>
+        </transition>
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto lg:flex-row">
             <!-- Product List Section (Left/Top) -->
             <div class="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 overflow-y-auto max-h-[calc(100vh-120px)] lg:max-h-full">
