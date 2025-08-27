@@ -1,18 +1,21 @@
 #!/bin/bash
 
-# Install dependencies
+# Install all dependencies
 npm i
-composer install --optimize-autoloader --no-dev
+composer install
+
+# Setup environment
+cp .env.example .env
+php artisan key:generate
+
+# Setup database and run migrations
+php artisan migrate --seed
 
 # Build UI
 npm run build
 
 # Clear laravel cache
 php artisan optimize:clear
-
-# Setup environment
-cp .env.example .env
-php artisan key:generate
 
 # Setup database and run migrations
 php artisan migrate --seed
@@ -26,3 +29,7 @@ php artisan route:cache
 php artisan view:cache
 php artisan event:cache
 php artisan optimize
+
+# Install only prod dependencies
+npm install --only=prod
+composer install --optimize-autoloader --no-dev
